@@ -5,8 +5,8 @@
    pelos valores do seu projeto no dashboard do Supabase.
    ============================================================ */
 
-const SUPABASE_URL     = 'https://SUA_URL.supabase.co';
-const SUPABASE_ANON_KEY = 'SUA_ANON_KEY_AQUI';
+const SUPABASE_URL     = 'https://ddaforxeehdsjxabwder.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_LIPVOqAe63rLUQYbVEEvKQ_NTxyE40o';
 
 // Cliente Supabase global
 let supabaseClient = null;
