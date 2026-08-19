@@ -20,7 +20,7 @@
    ============================================================ */
 
 const SUPABASE_URL_DEFAULT = 'https://ddaforxeehdsjxabwder.supabase.co';
-const SUPABASE_ANON_KEY_DEFAULT = '';
+const SUPABASE_ANON_KEY_DEFAULT = 'sb_publishable_LIPVOqAe63rLUQYbVEEvKQ_NTxyE40o';
 
 function getSupabaseUrl() {
     return localStorage.getItem('ct_supabase_url') || SUPABASE_URL_DEFAULT;
