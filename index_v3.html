@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Controle de Trânsito v3 - Saídas de Sentenciados</title>
+    <link rel="stylesheet" href="styles_v3.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- TELA DE LOGIN -->
+        <div id="login-screen" class="active">
+            <div class="login-container">
+                <div class="login-logo">🚔</div>
+                <h1>Controle de Trânsito</h1>
+                <p class="login-subtitle">Sistema de Cadastro de Saídas de Sentenciados</p>
+                <div class="login-field">
+                    <label for="operator-name">Nome do Operador</label>
+                    <input type="text" id="operator-name" placeholder="Digite seu nome completo" autocomplete="name">
+                </div>
+                <div class="login-field">
+                    <label for="operator-mat">Matrícula / ID</label>
+                    <input type="text" id="operator-mat" placeholder="Digite sua matrícula" autocomplete="off">
+                </div>
+                <button id="btn-login" class="btn-primary" style="width:100%;margin-top:0.5rem;">Entrar no Sistema</button>
+                <div id="login-error"></div>
+            </div>
+        </div>
+
+        <!-- TELA PRINCIPAL -->
+        <div id="main-screen">
+            <div class="app-wrapper">
+                <aside class="sidebar">
+                    <div class="sidebar-header">
+                        <h1>🚔 Controle de Trânsito</h1>
+                        <p>Complexo Penal de Marília</p>
+                    </div>
+
+                    <nav class="sidebar-nav">
+                        <div class="nav-item active" data-page="dashboard">
+                            <span class="nav-icon">📊</span>
+                            <span>Dashboard</span>
+                        </div>
+                        <div class="nav-item" data-page="cadastrar">
+                            <span class="nav-icon">➕</span>
+                            <span>Nova Saída</span>
+                        </div>
+                        <div class="nav-item" data-page="listar">
+                            <span class="nav-icon">📋</span>
+                            <span>Saídas Cadastradas</span>
+                        </div>
+                        <div class="nav-item" data-page="relatorio">
+                            <span class="nav-icon">📄</span>
+                            <span>Relatório Diário</span>
+                        </div>
+                        <div class="nav-item" data-page="configuracoes" id="nav-configuracoes" style="display:none">
+                            <span class="nav-icon">⚙️</span>
+                            <span>Configurações</span>
+                        </div>
+                        <div class="nav-item" data-page="auditoria" id="nav-auditoria" style="display:none">
+                            <span class="nav-icon">📜</span>
+                            <span>Auditoria</span>
+                        </div>
+                    </nav>
+
+                    <!-- INDICADOR DE STATUS DE CONEXÃO -->
+                    <div class="connection-status">
+                        <span class="status-dot offline" id="status-dot"></span>
+                        <span id="status-text">Verificando...</span>
+                        <span id="sync-queue-badge" style="display:none;"></span>
+                    </div>
+
+                    <div class="operator-info">
+                        <div class="operator-row">
+                            <div class="operator-avatar" id="operator-avatar"></div>
+                            <div class="operator-details">
+                                <div class="operator-name" id="display-operator-name"></div>
+                                <div class="operator-mat" id="display-operator-mat"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="btn-logout" class="btn-logout">🚪 Sair do Sistema</button>
+                </aside>
+
+                <main class="content">
+                    <!-- DASHBOARD -->
+                    <section id="page-dashboard" class="page active">
+                        <header class="page-header">
+                            <h2>📊 Dashboard</h2>
+                            <p class="page-subtitle">Visão geral das saídas de sentenciados</p>
+                        </header>
+
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon">📋</div>
+                                <div class="stat-number" id="kpi-total">0</div>
+                                <div class="stat-label">Total de Saídas</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">📅</div>
+                                <div class="stat-number" id="kpi-hoje">0</div>
+                                <div class="stat-label">Saídas Hoje</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">🚪</div>
+                                <div class="stat-number" id="kpi-externas">0</div>
+                                <div class="stat-label">Saídas Externas</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">🏢</div>
+                                <div class="stat-number" id="kpi-internas">0</div>
+                                <div class="stat-label">Saídas Internas</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">📆</div>
+                                <div class="stat-number" id="kpi-semana">0</div>
+                                <div class="stat-label">Esta Semana</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">📊</div>
+                                <div class="stat-number" id="kpi-mes">0</div>
+                                <div class="stat-label">Este Mês</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">⏳</div>
+                                <div class="stat-number" id="kpi-pendentes">0</div>
+                                <div class="stat-label">Pendentes</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">📈</div>
+                                <div class="stat-number" id="kpi-media">0</div>
+                                <div class="stat-label">Média/Dia</div>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-bottom">
+                            <div class="card">
+                                <div class="card-header">🕐 Próximas Saídas</div>
+                                <div class="card-body">
+                                    <ul class="upcoming-list" id="proximas-saidas">
+                                        <li class="upcoming-empty">Nenhuma saída registrada para hoje.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">📍 Locais Mais Frequentes</div>
+                                <div class="card-body">
+                                    <div id="locais-frequentes" class="empty-state">
+                                        <p>Sem dados suficientes.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">📝 Últimas Saídas</div>
+                                <div class="card-body">
+                                    <div id="ultimas-saidas" class="empty-state">
+                                        <p>Sem saídas registradas.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- CADASTRAR SAÍDA -->
+                    <section id="page-cadastrar" class="page">
+                        <header class="page-header">
+                            <h2>➕ Cadastrar Nova Saída</h2>
+                            <p class="page-subtitle">Preencha os dados da saída do sentenciado</p>
+                        </header>
+                        <div class="card">
+                            <div class="card-body">
+                                <form id="form-saida" class="form-grid">
+                                    <div class="form-section">
+                                        <h3 class="section-title">📅 Informações da Saída</h3>
+                                        <div class="form-grid-2col">
+                                            <div class="form-group">
+                                                <label for="s-data">Data da Saída *</label>
+                                                <input type="date" id="s-data" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="s-hora">Horário Previsto *</label>
+                                                <input type="time" id="s-hora" required>
+                                            </div>
+                                        </div>
+                                        <div class="form-grid-2col">
+                                            <div class="form-group">
+                                                <label for="s-tipo">Tipo de Saída *</label>
+                                                <select id="s-tipo" required>
+                                                    <option value="">Selecione...</option>
+                                                    <option value="externa">Externa (hospital, consulta, etc.)</option>
+                                                    <option value="interna">Interna (pátio, alimentação, etc.)</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="s-regime">Regime *</label>
+                                                <select id="s-regime" required>
+                                                    <option value="">Selecione...</option>
+                                                    <option value="SA">SA - Semiaberto</option>
+                                                    <option value="FE">FE - Fechado</option>
+                                                    <option value="CR">CR - Cela Regime</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="form-grid-2col">
+                                            <div class="form-group form-group-full">
+                                                <label for="s-local">Local da Apresentação *</label>
+                                                <input type="text" id="s-local" list="locais-sugeridos" placeholder="Ex: CHSP, HC I - Mário Covas, CAPS AD..." required>
+                                                <datalist id="locais-sugeridos">
+                                                    <option value="CHSP"></option>
+                                                    <option value="HC I - Mário Covas"></option>
+                                                    <option value="HC II - Materno Infantil"></option>
+                                                    <option value="HC III - São Francisco"></option>
+                                                    <option value="CAPS AD"></option>
+                                                    <option value="Hospital das Clínicas de Botucatu"></option>
+                                                    <option value="Hospital de Clínicas de Marília"></option>
+                                                    <option value="Hospital Materno Infantil"></option>
+                                                    <option value="Hemocentro - Marília"></option>
+                                                    <option value="UPA Zona Norte"></option>
+                                                    <option value="CR de Marília - Dentista"></option>
+                                                    <option value="IMESC São Paulo"></option>
+                                                    <option value="Centro Médico Aconchego - Marília"></option>
+                                                    <option value="Transporte de Alimentação / Retirada de Lixo"></option>
+                                                    <option value="Pátio"></option>
+                                                    <option value="Escola"></option>
+                                                    <option value="Oficina"></option>
+                                                    <option value="Capela"></option>
+                                                    <option value="Biblioteca"></option>
+                                                </datalist>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-section">
+                                        <h3 class="section-title">👤 Dados do Sentenciado</h3>
+                                        <div class="form-grid-2col">
+                                            <div class="form-group">
+                                                <label for="s-matricula">Matrícula / Prontuário *</label>
+                                                <input type="text" id="s-matricula" placeholder="Ex: 123456-7" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="s-nome">Nome Completo *</label>
+                                                <input type="text" id="s-nome" placeholder="Nome do sentenciado" required>
+                                            </div>
+                                        </div>
+                                        <div class="form-grid-2col">
+                                            <div class="form-group form-group-full">
+                                                <label for="s-tipo-apresentacao">Tipo de Apresentação *</label>
+                                                <input type="text" id="s-tipo-apresentacao" list="tipos-apresentacao" placeholder="Ex: Consulta, Cirurgia, Odontologia, Remoção..." required>
+                                                <datalist id="tipos-apresentacao">
+                                                    <option value="Consulta"></option>
+                                                    <option value="Cirurgia Geral"></option>
+                                                    <option value="Cirurgia Vascular"></option>
+                                                    <option value="Ortopedia"></option>
+                                                    <option value="Ortopedia Gesso"></option>
+                                                    <option value="Odontologia"></option>
+                                                    <option value="Raio X"></option>
+                                                    <option value="Eletrocardiograma"></option>
+                                                    <option value="Cardiologia"></option>
+                                                    <option value="Neurologia"></option>
+                                                    <option value="Psiquiatria"></option>
+                                                    <option value="Dermatologia"></option>
+                                                    <option value="Urologia"></option>
+                                                    <option value="Reumatologia"></option>
+                                                    <option value="Infectologia"></option>
+                                                    <option value="Nefrologia"></option>
+                                                    <option value="Otorrino"></option>
+                                                    <option value="Gastroenterologia"></option>
+                                                    <option value="Hemograma"></option>
+                                                    <option value="Ultrassonografia"></option>
+                                                    <option value="Perícia"></option>
+                                                    <option value="Biopsia"></option>
+                                                    <option value="Litotripsia"></option>
+                                                    <option value="Medida de Segurança (Tratamento Ambulatorial)"></option>
+                                                    <option value="Remoção"></option>
+                                                    <option value="Pós-Cirurgia"></option>
+                                                    <option value="Atividade Laboral"></option>
+                                                    <option value="Estudo"></option>
+                                                    <option value="Culto / Missa"></option>
+                                                    <option value="Atividade Esportiva"></option>
+                                                </datalist>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-section">
+                                        <h3 class="section-title">🚐 Transporte</h3>
+                                        <div class="form-grid-2col">
+                                            <div class="form-group">
+                                                <label for="s-viatura">Viatura / Veículo</label>
+                                                <input type="text" id="s-viatura" placeholder="Ex: CMW-9549, FJG-7158, Trator...">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="s-motorista">Motorista / Acompanhante</label>
+                                                <input type="text" id="s-motorista" placeholder="Nome do motorista ou acompanhante">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-section">
+                                        <h3 class="section-title">📝 Observações</h3>
+                                        <div class="form-grid-2col">
+                                            <div class="form-group form-group-full">
+                                                <label for="s-obs">Observações Adicionais</label>
+                                                <textarea id="s-obs" rows="3" placeholder="Informações complementares sobre a saída..."></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style="display:flex; gap:0.75rem; justify-content:flex-end; margin-top:1rem;">
+                                        <button type="button" id="btn-limpar" class="btn-secondary">Limpar</button>
+                                        <button type="submit" class="btn-primary">💾 Salvar Saída</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- LISTAR SAÍDAS -->
+                    <section id="page-listar" class="page">
+                        <header class="page-header">
+                            <h2>📋 Saídas Cadastradas</h2>
+                            <p class="page-subtitle">Consulte e gerencie todas as saídas registradas</p>
+                        </header>
+                        <div class="card">
+                            <div class="filters-bar">
+                                <div class="form-group">
+                                    <label>Data Inicial</label>
+                                    <input type="date" id="filter-data-ini">
+                                </div>
+                                <div class="form-group">
+                                    <label>Data Final</label>
+                                    <input type="date" id="filter-data-fim">
+                                </div>
+                                <div class="form-group">
+                                    <label>Tipo</label>
+                                    <select id="filter-tipo">
+                                        <option value="">Todos</option>
+                                        <option value="externa">Externa</option>
+                                        <option value="interna">Interna</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Regime</label>
+                                    <select id="filter-regime">
+                                        <option value="">Todos</option>
+                                        <option value="SA">SA</option>
+                                        <option value="FE">FE</option>
+                                        <option value="CR">CR</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Buscar</label>
+                                    <input type="text" id="filter-busca" placeholder="Nome, matrícula ou local...">
+                                </div>
+                                <button id="btn-aplicar-filtros" class="btn-primary">Filtrar</button>
+                                <button id="btn-limpar-filtros" class="btn-secondary">Limpar</button>
+                            </div>
+                            <div class="card-body table-container">
+                                <table class="data-table" id="tabela-saidas">
+                                    <thead>
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Hora</th>
+                                            <th>Local</th>
+                                            <th>Matrícula</th>
+                                            <th>Nome</th>
+                                            <th>Tipo Apresentação</th>
+                                            <th>Regime</th>
+                                            <th>Tipo Saída</th>
+                                            <th>Viatura</th>
+                                            <th>Motorista</th>
+                                            <th>Cadastrado por</th>
+                                            <th>Última Edição</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-saidas">
+                                        <tr>
+                                            <td colspan="13" class="empty-state">Nenhuma saída cadastrada.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- RELATÓRIO -->
+                    <section id="page-relatorio" class="page">
+                        <header class="page-header">
+                            <h2>📄 Relatório de Saídas</h2>
+                            <p class="page-subtitle">Relatório analítico com filtros por período, tipo, local e regime</p>
+                        </header>
+
+                        <div class="card" style="margin-bottom:1.5rem;">
+                            <div class="filters-bar">
+                                <div class="form-group">
+                                    <label>Data Início</label>
+                                    <input type="date" id="rel-data-inicio">
+                                </div>
+                                <div class="form-group">
+                                    <label>Data Fim</label>
+                                    <input type="date" id="rel-data-fim">
+                                </div>
+                                <div class="form-group">
+                                    <label>Tipo Saída</label>
+                                    <select id="rel-tipo">
+                                        <option value="">Todos</option>
+                                        <option value="externa">Externa</option>
+                                        <option value="interna">Interna</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Regime</label>
+                                    <select id="rel-regime">
+                                        <option value="">Todos</option>
+                                        <option value="SA">Semiaberto (SA)</option>
+                                        <option value="FE">Fechado (FE)</option>
+                                        <option value="CR">Custódia (CR)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Local</label>
+                                    <select id="rel-local">
+                                        <option value="">Todos</option>
+                                        <option value="Audiência">Audiência</option>
+                                        <option value="Fórum">Fórum</option>
+                                        <option value="Presídio">Presídio</option>
+                                        <option value="Delegacia">Delegacia</option>
+                                        <option value="Hospital">Hospital</option>
+                                        <option value="Outro">Outro</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" id="rel-filtro-operador-wrap" style="display:none;">
+                                    <label>Operador</label>
+                                    <select id="rel-operador">
+                                        <option value="">Todos</option>
+                                    </select>
+                                </div>
+                                <button id="btn-gerar-relatorio" class="btn-primary">📄 Gerar Relatório</button>
+                                <button id="btn-limpar-relatorio" class="btn-secondary">Limpar</button>
+                            </div>
+                        </div>
+
+                        <!-- Resumo estatístico -->
+                        <div class="stats-grid" id="relatorio-kpis" style="display:none; margin-bottom:1.5rem;">
+                            <div class="stat-card">
+                                <div class="stat-icon">📊</div>
+                                <div class="stat-number" id="rel-kpi-total">0</div>
+                                <div class="stat-label">Total de Saídas</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">🚪</div>
+                                <div class="stat-number" id="rel-kpi-externas">0</div>
+                                <div class="stat-label">Saídas Externas</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">🏠</div>
+                                <div class="stat-number" id="rel-kpi-internas">0</div>
+                                <div class="stat-label">Saídas Internas</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">📅</div>
+                                <div class="stat-number" id="rel-kpi-dias">0</div>
+                                <div class="stat-label">Dias no Período</div>
+                            </div>
+                        </div>
+
+                        <!-- Resumos por local e regime -->
+                        <div class="report-resumos-grid hidden" id="relatorio-resumos">
+                            <div class="card">
+                                <div class="card-header">Resumo por Local</div>
+                                <div class="card-body"><ul class="upcoming-list" id="resumo-local"></ul></div>
+                            </div>
+                            <div class="card">
+                                <div class="card-header">Resumo por Regime</div>
+                                <div class="card-body"><ul class="upcoming-list" id="resumo-regime"></ul></div>
+                            </div>
+                            <div class="card">
+                                <div class="card-header">Resumo por Operador</div>
+                                <div class="card-body"><ul class="upcoming-list" id="resumo-operador"></ul></div>
+                            </div>
+                            <div class="card">
+                                <div class="card-header">Resumo por Tipo de Apresentação</div>
+                                <div class="card-body"><ul class="upcoming-list" id="resumo-apresentacao"></ul></div>
+                            </div>
+                        </div>
+
+                        <!-- Tabela de resultados -->
+                        <div class="card" id="relatorio-tabela-card" style="display:none;">
+                            <div class="card-header" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; align-items:center;">
+                                <h3>Resultado do Relatório</h3>
+                                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                    <button id="btn-imprimir-relatorio" class="btn-secondary">🖨️ Imprimir</button>
+                                    <button id="btn-exportar-pdf" class="btn-secondary">📥 PDF</button>
+                                    <button id="btn-exportar-csv" class="btn-primary" style="background:var(--success);">📥 CSV</button>
+                                </div>
+                            </div>
+                            <div class="card-body table-container">
+                                <div style="margin-bottom:1rem; display:flex; gap:2rem; flex-wrap:wrap;">
+                                    <span><strong>Total:</strong> <span id="rel-total">0</span></span>
+                                    <span><strong>Externas:</strong> <span id="rel-ext">0</span></span>
+                                    <span><strong>Internas:</strong> <span id="rel-int">0</span></span>
+                                    <span id="relatorio-data-display"></span>
+                                </div>
+                                <table class="data-table" id="tabela-relatorio">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Data</th>
+                                            <th>Horário</th>
+                                            <th>Local</th>
+                                            <th>Matrícula</th>
+                                            <th>Nome</th>
+                                            <th>Tipo Apresentação</th>
+                                            <th>Regime</th>
+                                            <th>Tipo Saída</th>
+                                            <th>Viatura</th>
+                                            <th>Motorista</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-relatorio">
+                                        <tr>
+                                            <td colspan="11" class="empty-state">Selecione os filtros e clique em Gerar Relatório.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <div style="margin-top:1rem; color:var(--text-secondary); font-size:0.8rem;">
+                                    <p>Documento gerado automaticamente pelo sistema de Controle de Trânsito.</p>
+                                    <p>Este relatório não contém identificação dos sentenciados conforme normativa.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- CONFIGURAÇÕES -->
+                    <section id="page-configuracoes" class="page">
+                        <header class="page-header">
+                            <h2>⚙️ Configurações</h2>
+                            <p class="page-subtitle">Gerenciar administradores e conexão do sistema</p>
+                        </header>
+
+                        <!-- CONEXÃO SUPABASE -->
+                        <div class="card" style="margin-bottom:1.5rem;">
+                            <div class="card-body">
+                                <div class="form-section">
+                                    <h3 class="section-title">🌐 Conexão com Supabase</h3>
+                                    <p style="color:var(--text-secondary); margin-bottom:1rem;">Configure a URL e a chave de acesso (anon key) do seu projeto Supabase. O sistema salva essas informações localmente para reconectar automaticamente.</p>
+                                    <div class="form-grid-2col">
+                                        <div class="form-group form-group-full">
+                                            <label for="cfg-supabase-url">URL do Projeto Supabase</label>
+                                            <input type="text" id="cfg-supabase-url" placeholder="https://xxxxx.supabase.co" value="">
+                                        </div>
+                                    </div>
+                                    <div class="form-grid-2col">
+                                        <div class="form-group form-group-full">
+                                            <label for="cfg-supabase-key">Chave Anon (anon key)</label>
+                                            <input type="text" id="cfg-supabase-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." value="">
+                                        </div>
+                                    </div>
+                                    <div id="supabase-test-result" style="display:none; margin-bottom:1rem; padding:0.75rem 1rem; border-radius:8px; border:1px solid var(--border); font-size:0.85rem;"></div>
+                                    <div style="display:flex; gap:0.5rem; justify-content:flex-end; flex-wrap:wrap;">
+                                        <button id="btn-testar-supabase" class="btn-secondary">🔍 Testar Conexão</button>
+                                        <button id="btn-salvar-supabase" class="btn-primary">💾 Salvar Conexão</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ADMINISTRADORES -->
+                        <div class="card" style="margin-bottom:1.5rem;">
+                            <div class="card-body">
+                                <div class="form-section">
+                                    <h3 class="section-title">🔐 Administradores</h3>
+                                    <p style="color:var(--text-secondary); margin-bottom:1rem;">Apenas administradores podem editar saídas já cadastradas. Altere os nomes abaixo e clique em Salvar.</p>
+                                    <div class="form-grid-2col">
+                                        <div class="form-group">
+                                            <label for="cfg-admin1-name">Nome do Administrador 1</label>
+                                            <input type="text" id="cfg-admin1-name" placeholder="Nome completo">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="cfg-admin1-mat">Matrícula do Administrador 1</label>
+                                            <input type="text" id="cfg-admin1-mat" value="2026">
+                                        </div>
+                                    </div>
+                                    <div class="form-grid-2col">
+                                        <div class="form-group">
+                                            <label for="cfg-admin2-name">Nome do Administrador 2</label>
+                                            <input type="text" id="cfg-admin2-name" placeholder="Nome completo">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="cfg-admin2-mat">Matrícula do Administrador 2</label>
+                                            <input type="text" id="cfg-admin2-mat" value="2026">
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; justify-content:flex-end; margin-top:1rem;">
+                                        <button id="btn-salvar-configs" class="btn-primary">💾 Salvar Configurações</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- DADOS DE DEMONSTRAÇÃO -->
+                        <div class="card" style="margin-bottom:1.5rem;">
+                            <div class="card-body">
+                                <div class="form-section">
+                                    <h3 class="section-title">📊 Dados de Demonstração</h3>
+                                    <p style="color:var(--text-secondary); margin-bottom:1rem;">Importar dados reais da planilha Controle de Trânsito (jun–ago 2026) para testar o sistema. Isso adicionará saídas, sentenciados e destinos ao cadastro.</p>
+                                    <p style="color:var(--text-secondary); margin-bottom:1rem;"><strong id="seed-count-label">0</strong> registros disponíveis para importação. <strong id="existing-count-label">0</strong> registros já cadastrados.</p>
+                                    <div style="display:flex; gap:0.5rem; justify-content:flex-end; flex-wrap:wrap;">
+                                        <button id="btn-import-seed" class="btn-primary" style="background:var(--success);">📥 Importar Dados da Planilha</button>
+                                        <button id="btn-reset-seed" class="btn-secondary" style="color:var(--danger); border-color:var(--danger);">🗑️ Limpar Todos os Dados</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MIGRAÇÃO -->
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="form-section">
+                                    <h3 class="section-title">🗄️ Migração de Dados</h3>
+                                    <p style="color:var(--text-secondary); margin-bottom:1rem;">Transfira todos os dados salvos localmente neste navegador para o Supabase. Útil ao ativar a nuvem pela primeira vez ou após reinstalar.</p>
+                                    <div id="migracao-status" style="display:none; margin-bottom:1rem; padding:0.75rem 1rem; border-radius:8px; border:1px solid var(--border);">
+                                        <span id="migracao-texto">Aguardando...</span>
+                                    </div>
+                                    <div style="display:flex; justify-content:flex-end;">
+                                        <button id="btn-migrar-supabase" class="btn-primary" style="background:var(--info);">🚀 Migrar dados para Supabase</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- AUDITORIA -->
+                    <section id="page-auditoria" class="page">
+                        <header class="page-header">
+                            <h2>📜 Auditoria</h2>
+                            <p class="page-subtitle">Log de alterações e exclusões registradas no sistema</p>
+                        </header>
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="filters-bar">
+                                    <div class="form-group">
+                                        <label>Data Início</label>
+                                        <input type="date" id="audit-filter-data-inicio">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Data Fim</label>
+                                        <input type="date" id="audit-filter-data-fim">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Operador</label>
+                                        <input type="text" id="audit-filter-operador" placeholder="Nome ou matrícula">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Ação</label>
+                                        <select id="audit-filter-acao">
+                                            <option value="">Todas</option>
+                                            <option value="EDIT">Edição</option>
+                                            <option value="DELETE">Exclusão</option>
+                                        </select>
+                                    </div>
+                                    <button class="btn-secondary" id="btn-audit-reset">Limpar Filtros</button>
+                                </div>
+                                <div class="table-container">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Data/Hora</th>
+                                                <th>Operador</th>
+                                                <th>Ação</th>
+                                                <th>Detalhes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="audit-table-body"></tbody>
+                                    </table>
+                                </div>
+                                <div id="audit-empty" class="empty-state" style="display:none;">
+                                    <span style="font-size:2rem;">📭</span>
+                                    <p style="color:var(--text-secondary);">Nenhum registro de auditoria encontrado.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDIÇÃO -->
+    <div id="modal-edit" class="modal">
+        <div class="modal-content" style="max-width:680px;">
+            <div class="modal-header">
+                <h3>✏️ Editar Saída</h3>
+            </div>
+            <div class="modal-body">
+                <form id="form-edit-saida" class="form-grid" onsubmit="event.preventDefault();">
+                    <div class="form-section">
+                        <h4 class="section-title">📅 Informações da Saída</h4>
+                        <div class="form-grid-2col">
+                            <div class="form-group">
+                                <label for="edit-s-data">Data da Saída *</label>
+                                <input type="date" id="edit-s-data" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-s-hora">Horário Previsto *</label>
+                                <input type="time" id="edit-s-hora" required>
+                            </div>
+                        </div>
+                        <div class="form-grid-2col">
+                            <div class="form-group">
+                                <label for="edit-s-tipo">Tipo de Saída *</label>
+                                <select id="edit-s-tipo" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="externa">Externa (hospital, consulta, etc.)</option>
+                                    <option value="interna">Interna (pátio, alimentação, etc.)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-s-regime">Regime *</label>
+                                <select id="edit-s-regime" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="SA">SA - Semiaberto</option>
+                                    <option value="FE">FE - Fechado</option>
+                                    <option value="CR">CR - Cela Regime</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-grid-2col">
+                            <div class="form-group form-group-full">
+                                <label for="edit-s-local">Local da Apresentação *</label>
+                                <input type="text" id="edit-s-local" list="locais-sugeridos" placeholder="Ex: CHSP, HC I - Mário Covas..." required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <h4 class="section-title">👤 Dados do Sentenciado</h4>
+                        <div class="form-grid-2col">
+                            <div class="form-group">
+                                <label for="edit-s-matricula">Matrícula / Prontuário *</label>
+                                <input type="text" id="edit-s-matricula" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-s-nome">Nome Completo *</label>
+                                <input type="text" id="edit-s-nome" required>
+                            </div>
+                        </div>
+                        <div class="form-grid-2col">
+                            <div class="form-group form-group-full">
+                                <label for="edit-s-tipo-apresentacao">Tipo de Apresentação *</label>
+                                <input type="text" id="edit-s-tipo-apresentacao" list="tipos-apresentacao" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <h4 class="section-title">🚐 Transporte</h4>
+                        <div class="form-grid-2col">
+                            <div class="form-group">
+                                <label for="edit-s-viatura">Viatura / Veículo</label>
+                                <input type="text" id="edit-s-viatura">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-s-motorista">Motorista / Acompanhante</label>
+                                <input type="text" id="edit-s-motorista">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <h4 class="section-title">📝 Observações</h4>
+                        <div class="form-grid-2col">
+                            <div class="form-group form-group-full">
+                                <label for="edit-s-obs">Observações Adicionais</label>
+                                <textarea id="edit-s-obs" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-cancel-edit" class="btn-secondary">Cancelar</button>
+                <button id="btn-save-edit" class="btn-primary">💾 Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CONFIRMAÇÃO -->
+    <div id="modal-confirm" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚠️ Confirmar Exclusão</h3>
+            </div>
+            <div class="modal-body">
+                <p>Deseja realmente excluir esta saída? Esta ação não pode ser desfeita.</p>
+                <p class="modal-detail" id="modal-detail-text"></p>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-cancel-delete" class="btn-secondary">Cancelar</button>
+                <button id="btn-confirm-delete" class="btn-danger">Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICAÇÃO -->
+    <div id="toast" class="toast">
+        <span id="toast-icon"></span>
+        <span id="toast-message"></span>
+    </div>
+
+    <script src="seed_data_v3.js"></script>
+    <script src="app_v3.js"></script>
+</body>
+</html>
