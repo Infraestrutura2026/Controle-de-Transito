@@ -16,8 +16,10 @@ export default async function LoginPage() {
       <div className="w-full max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-surface text-ink shadow-2xl sm:grid sm:grid-cols-[0.95fr_1.05fr]">
         <section className="relative overflow-hidden bg-ink p-7 text-paper sm:p-9">
           <div className="absolute inset-0 opacity-30 [background:radial-gradient(circle_at_20%_20%,#f3d479_0,transparent_28%),radial-gradient(circle_at_90%_10%,#7cbba9_0,transparent_24%)]" />
-          {/* Brasão oficial como marca d'água atrás do bloco "Controle de Saídas". */}
-          <Brasao className="pointer-events-none absolute left-1/2 top-[54%] w-[270px] -translate-x-1/2 -translate-y-1/2 opacity-[0.09] select-none sm:w-[320px]" />
+          {/* Halo de luz suave para destacar a marca d'água sobre o fundo escuro. */}
+          <div className="pointer-events-none absolute left-1/2 top-[54%] size-[330px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-70 blur-2xl [background:radial-gradient(circle,rgba(244,243,238,0.5)_0%,transparent_65%)] sm:size-[400px]" />
+          {/* Brasão oficial da Polícia Penal como marca d'água atrás do bloco "Controle de Saídas". */}
+          <Brasao className="pointer-events-none absolute left-1/2 top-[54%] w-[250px] -translate-x-1/2 -translate-y-1/2 opacity-[0.55] select-none sm:w-[290px]" />
           <div className="relative z-10">
             <div className="mb-8 grid size-12 place-items-center rounded-xl bg-pine-600 ring-1 ring-white/10">
               <IconeEscudo className="size-6" />

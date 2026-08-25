@@ -2,8 +2,7 @@ import Image from "next/image";
 
 /**
  * Brasão oficial da Polícia Penal do Estado de São Paulo.
- * Arquivo real recortado do logotipo oficial (policiapenal.sp.gov.br),
- * com fundo transparente: /public/brasao.png
+ * Arquivo com fundo transparente: /public/brasao.png
  *
  * Usado como marca d'água no login, no menu lateral, no cabeçalho das
  * páginas e nos cabeçalhos dos relatórios.
