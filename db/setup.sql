@@ -1,10 +1,11 @@
 -- ============================================================================
 -- CONTROLE DE SAÍDAS — Complexo Penal de Marília
--- Script de criação do banco de dados para o Supabase
+-- Script de criação do banco de dados (PostgreSQL)
+-- Funciona em: Neon, Supabase ou qualquer PostgreSQL
 --
--- COMO USAR:
--- 1. Crie o projeto no Supabase (supabase.com → New project);
--- 2. No painel, abra: SQL Editor → New query;
+-- COMO USAR (Neon):
+-- 1. Crie o projeto no Neon (console.neon.tech → New project);
+-- 2. No painel do Neon, abra: SQL Editor (no menu lateral);
 -- 3. Cole todo o conteúdo deste arquivo e clique em Run;
 -- 4. Pronto: as tabelas estarão criadas e o app pode conectar.
 -- ============================================================================
@@ -67,8 +68,7 @@ CREATE INDEX IF NOT EXISTS idx_saidas_data       ON saidas (data);
 CREATE INDEX IF NOT EXISTS idx_saidas_criado_por ON saidas (criado_por_nome, criado_por_rs);
 
 -- ---------------------------------------------------------------------------
--- NOTA: o app conecta diretamente usando a senha do banco (usuário "postgres"
--- do Supabase), portanto Row Level Security não é necessária aqui — as regras
--- de acesso são aplicadas pelo próprio sistema (admin vê tudo, operador vê só
--- as próprias saídas).
+-- NOTA: o app conecta diretamente usando a senha do banco, portanto Row Level
+-- Security não é necessária aqui — as regras de acesso são aplicadas pelo
+-- próprio sistema (admin vê tudo, operador vê só as próprias saídas).
 -- ---------------------------------------------------------------------------
