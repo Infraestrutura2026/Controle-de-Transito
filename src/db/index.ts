@@ -11,10 +11,16 @@ const globalForDb = globalThis as typeof globalThis & {
   __arenaNextJsPostgresqlPool?: Pool;
 };
 
+// Bancos na nuvem (Supabase, Neon, etc.) exigem SSL na conexão.
+// Detecta automaticamente URLs do Supabase ou força com DATABASE_SSL=true.
+const precisaSsl =
+  process.env.DATABASE_SSL === "true" || databaseUrl.includes("supabase");
+
 export const pool =
   globalForDb.__arenaNextJsPostgresqlPool ??
   new Pool({
     connectionString: databaseUrl,
+    ssl: precisaSsl ? { rejectUnauthorized: false } : undefined,
   });
 
 if (process.env.NODE_ENV !== "production") {
