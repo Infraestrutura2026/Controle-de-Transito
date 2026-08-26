@@ -1,3 +1,5 @@
+import { agoraNoBrasil } from "./format";
+
 export const TIPOS = ["SA", "FE", "CR"] as const;
 export type Tipo = (typeof TIPOS)[number];
 
@@ -60,17 +62,17 @@ export interface DadosSaida {
   justificativa?: string;
 }
 
-/** Data ISO de hoje (AAAA-MM-DD). */
+/** Data ISO de hoje (AAAA-MM-DD) no fuso de São Paulo. */
 export function hojeISO(): string {
-  const d = new Date();
+  const d = agoraNoBrasil();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
     d.getDate()
   ).padStart(2, "0")}`;
 }
 
-/** Hora local atual (HH:MM). */
+/** Hora atual (HH:MM) no fuso de São Paulo. */
 export function horaAtualHHMM(): string {
-  const d = new Date();
+  const d = agoraNoBrasil();
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
