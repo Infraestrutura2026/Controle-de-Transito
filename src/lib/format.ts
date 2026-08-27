@@ -33,38 +33,9 @@ export function dataBRParaISO(br: string): string {
   return `${a}-${m}-${d}`;
 }
 
-/**
- * "Relógio" do sistema no fuso de São Paulo (America/Sao_Paulo).
- *
- * Servidores na nuvem (Vercel, etc.) costumam rodar em UTC. Sem esta
- * conversão, entre 00:00 e 03:00 (horário de Brasília) o sistema
- * consideraria "amanhã" e rejeitaria saídas com a data de hoje.
- * Retorna um Date cujos campos locais (getFullYear, getMonth, ...)
- * correspondem ao horário de São Paulo.
- */
-export function agoraNoBrasil(): Date {
-  const partes = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Sao_Paulo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  }).formatToParts(new Date());
-
-  const v: Record<string, number> = {};
-  for (const p of partes) {
-    if (p.type !== "literal") v[p.type] = Number(p.value);
-  }
-  const hora = v.hour === 24 ? 0 : v.hour; // alguns motores retornam "24" p/ meia-noite
-  return new Date(v.year, v.month - 1, v.day, hora, v.minute, v.second);
-}
-
 /** Data local de hoje no formato AAAA-MM-DD (uso interno/API). */
 export function hojeISO(): string {
-  const d = agoraNoBrasil();
+  const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
     d.getDate()
   ).padStart(2, "0")}`;
@@ -77,13 +48,13 @@ export function hojeBR(): string {
 
 /** Primeiro dia do mês atual em DD/MM/AAAA. */
 export function primeiroDiaMesBR(): string {
-  const d = agoraNoBrasil();
+  const d = new Date();
   return `01/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
 }
 
 /** Data de N dias atrás em DD/MM/AAAA. */
 export function diasAtrasBR(n: number): string {
-  const d = agoraNoBrasil();
+  const d = new Date();
   d.setDate(d.getDate() - n);
   return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(
     2,
@@ -93,7 +64,7 @@ export function diasAtrasBR(n: number): string {
 
 /** Ex.: "terça-feira, 25/08/2026" — sempre no padrão brasileiro. */
 export function dataLongaBR(): string {
-  const agora = agoraNoBrasil();
+  const agora = new Date();
   const semana = agora.toLocaleDateString("pt-BR", { weekday: "long" });
   return `${semana}, ${hojeBR()}`;
 }
