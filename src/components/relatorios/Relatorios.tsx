@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import RelatorioDiario from "../RelatorioDiario";
+import TabelaPlanilha, { montarLinhasPlanilha } from "../TabelaPlanilha";
 import TypeBadge from "../TypeBadge";
 import { TIPOS } from "@/lib/constantes";
 import { dataBRParaISO, formatarDataBR, hojeBR } from "@/lib/format";
@@ -58,13 +59,13 @@ const OPCOES: {
   {
     id: "diario",
     label: "Diário",
-    desc: "Movimentação completa de um dia, com totais por local e por regime.",
+    desc: "Planilha do dia com todas as saídas, totais por regime e por local.",
     Icone: IconeMenuRelatorioDiario,
   },
   {
     id: "periodo",
     label: "Consolidado por Período",
-    desc: "Totais gerais e saídas dia a dia entre duas datas.",
+    desc: "Planilha consolidada entre duas datas, com resumo dia a dia e totais.",
     Icone: IconeMenuDashboard,
   },
   {
@@ -120,10 +121,17 @@ function contarRegimes(itens: { regime: string }[]) {
 /* ================================================================
    1) CONSOLIDADO POR PERÍODO
 ================================================================ */
+/**
+ * Consolidado por Período — mesma estrutura do documento de papel
+ * (TabelaPlanilha), com todas as saídas do período em sequência,
+ * numeração contínua, quadro-resumo por dia e faixa de totais.
+ */
 function RelatorioPeriodo({ usuarioNome }: PropsRelatorio) {
   const [de, setDe] = useState(primeiroDiaDoMesBR());
   const [ate, setAte] = useState(hojeBR());
   const { itens, carregando } = useSaidas({ de, ate });
+
+  const linhas = useMemo(() => montarLinhasPlanilha(itens), [itens]);
 
   const porDia = useMemo(() => {
     const m = new Map<string, { regime: string }[]>();
@@ -147,25 +155,30 @@ function RelatorioPeriodo({ usuarioNome }: PropsRelatorio) {
   function exportar() {
     baixarCSV(
       `consolidado-${dataBRParaISO(de)}-a-${dataBRParaISO(ate)}.csv`,
-      ["Data", "Total", "SA", "FE", "CR"],
-      porDia.map((d) => [formatarDataBR(d.data), String(d.total), String(d.reg.SA), String(d.reg.FE), String(d.reg.CR)])
+      ["Nº", "Data", "Hora", "Local", "Matrícula", "Nome", "Motivo", "Regime", "Observações"],
+      linhas.map((l) => [
+        String(l.numero),
+        l.data,
+        l.hora,
+        l.local,
+        l.matricula,
+        l.nome,
+        l.motivo,
+        l.regime,
+        l.obs,
+      ])
     );
   }
 
   return (
-    <PainelRelatorio>
-      <CabecalhoRelatorio
-        titulo="Relatório Consolidado por Período"
-        subtitulo={`Período: ${formatarDataBR(de)} a ${formatarDataBR(ate)}`}
-        usuarioNome={usuarioNome}
-      />
-
-      <div className="my-4 flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface p-4 shadow-sm print:hidden">
         <SeletorPeriodo de={de} ate={ate} aoMudar={(d, a) => { setDe(d); setAte(a); }} />
-        <BotoesRelatorio aoExportar={exportar} exportarDesabilitado={total === 0} />
+        <BotoesRelatorio aoExportar={exportar} exportarDesabilitado={linhas.length === 0} />
       </div>
 
-      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      {/* resumo de apoio — só na tela */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 print:hidden">
         <Cartao rotulo="Total de saídas" valor={total} />
         <Cartao rotulo="Regime SA" valor={reg.SA} tom="azul" />
         <Cartao rotulo="Regime FE" valor={reg.FE} tom="neutro" />
@@ -174,36 +187,25 @@ function RelatorioPeriodo({ usuarioNome }: PropsRelatorio) {
         <Cartao rotulo="Pessoas distintas" valor={pessoasDistintas} />
       </div>
 
-      <div className="overflow-x-auto">
-        <table className={TBL}>
-          <thead>
-            <tr>
-              <th className={TH}>Data</th>
-              <th className={`${TH} text-center`}>Total</th>
-              <th className={`${TH} text-center`}>SA</th>
-              <th className={`${TH} text-center`}>FE</th>
-              <th className={`${TH} text-center`}>CR</th>
-            </tr>
-          </thead>
-          <tbody>
-            {porDia.length === 0 ? (
-              <LinhaVazia colunas={5} carregando={carregando} mensagem="Nenhuma saída no período selecionado." />
-            ) : (
-              porDia.map((d) => (
-                <tr key={d.data} className="hover:bg-paper/40">
-                  <td className={`${TD} font-display font-bold tabular-nums text-ink`}>{formatarDataBR(d.data)}</td>
-                  <td className={`${TD} text-center font-display font-bold tabular-nums`}>{d.total}</td>
-                  <td className={`${TD} text-center tabular-nums text-sa-700`}>{d.reg.SA}</td>
-                  <td className={`${TD} text-center tabular-nums text-stone-700`}>{d.reg.FE}</td>
-                  <td className={`${TD} text-center tabular-nums text-cr-700`}>{d.reg.CR}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-      <RodapeImpressao />
-    </PainelRelatorio>
+      {/* O documento: mesma réplica da planilha física do relatório diário */}
+      <TabelaPlanilha
+        titulo="Planilha de Controle de Saídas — Consolidado"
+        contexto={`Período de ${formatarDataBR(de)} a ${formatarDataBR(ate)}`}
+        linhas={linhas}
+        carregando={carregando}
+        usuarioNome={usuarioNome}
+        minimoLinhas={8}
+        rotuloTotais="Total de saídas no período"
+        totais={{ SA: reg.SA, FE: reg.FE, CR: reg.CR }}
+        resumoPorDia={porDia.map((d) => ({
+          data: formatarDataBR(d.data),
+          total: d.total,
+          sa: d.reg.SA,
+          fe: d.reg.FE,
+          cr: d.reg.CR,
+        }))}
+      />
+    </div>
   );
 }
 

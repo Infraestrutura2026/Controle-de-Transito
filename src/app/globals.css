@@ -59,8 +59,7 @@
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-line-strong) transparent;
-}
-*::-webkit-scrollbar {
+}*::-webkit-scrollbar {
   height: 8px;
   width: 8px;
 }
@@ -70,4 +69,30 @@
 }
 *::-webkit-scrollbar-track {
   background: transparent;
+}
+/* ---------- Planilha física (TabelaPlanilha): tela + impressão ---------- */
+
+/* preserva as cores do formulário (cabeçalho amarelo, faixas de total) na impressão */
+.area-planilha,
+.area-planilha * {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 9mm;
+  }
+  body {
+    background: #fff;
+  }
+  .area-planilha {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+  .linha-planilha {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
 }
