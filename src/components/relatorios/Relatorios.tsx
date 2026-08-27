@@ -155,7 +155,7 @@ function RelatorioPeriodo({ usuarioNome }: PropsRelatorio) {
   function exportar() {
     baixarCSV(
       `consolidado-${dataBRParaISO(de)}-a-${dataBRParaISO(ate)}.csv`,
-      ["Nº", "Data", "Hora", "Local", "Matrícula", "Nome", "Motivo", "Regime", "Observações"],
+      ["Nº", "Data", "Hora", "Local", "Matrícula", "Nome", "Motivo", "Regime", "Viatura", "Motorista"],
       linhas.map((l) => [
         String(l.numero),
         l.data,
@@ -165,7 +165,8 @@ function RelatorioPeriodo({ usuarioNome }: PropsRelatorio) {
         l.nome,
         l.motivo,
         l.regime,
-        l.obs,
+        l.veiculo,
+        l.motorista,
       ])
     );
   }
