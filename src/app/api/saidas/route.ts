@@ -5,9 +5,15 @@ import { saidas } from "@/db/schema";
 import { ehTipo, validarSaida } from "@/lib/constantes";
 import { ehAdministrador, exigirOperador } from "@/lib/sessao";
 import { respostaErroAuth } from "@/lib/apiAuth";
-import { hojeISO } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+
+function hojeISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
+}
 
 function escopoOperador(nome: string, rs: string): SQL[] {
   return [eq(saidas.criadoPorNome, nome), eq(saidas.criadoPorRs, rs)];

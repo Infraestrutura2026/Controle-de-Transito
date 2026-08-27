@@ -76,14 +76,19 @@ function parseHora(v: unknown): string {
     return `${dois(Math.floor(total / 60) % 24)}:${dois(total % 60)}`;
   }
   const s = String(v ?? "").trim();
-  const m = s.match(/^(\d{1,2}):(\d{2})/);
+  // Aceita 7:00, 07:00, 07:00:00 e também 07.00.
+  const m = s.match(/^(\d{1,2})[:.](\d{2})(?::\d{2})?$/);
   if (m) {
     const h = Number(m[1]);
     const mi = Number(m[2]);
-    if (h <= 23 && mi <= 59) return `${dois(h)}:${dois(mi)}`;
+    if (h >= 0 && h <= 23 && mi >= 0 && mi <= 59) return `${dois(h)}:${dois(mi)}`;
   }
   const m2 = s.match(/^(\d{2})(\d{2})$/);
-  if (m2) return `${m2[1]}:${m2[2]}`;
+  if (m2) {
+    const h = Number(m2[1]);
+    const mi = Number(m2[2]);
+    if (h >= 0 && h <= 23 && mi >= 0 && mi <= 59) return `${m2[1]}:${m2[2]}`;
+  }
   return "";
 }
 
@@ -167,9 +172,10 @@ export async function parseArquivoPlanilha(file: File): Promise<ResultadoParse> 
     const rFmt = brutoFormatado[i] ?? rRaw;
     if (rRaw.every((c) => texto(c) === "") && rFmt.every((c) => texto(c) === "")) continue;
 
-    // Dá prioridade ao valor nativo para datas/horas, com fallback ao texto exibido.
+    // Datas: prioridade ao valor nativo do Excel para evitar ambiguidade dia/mês.
+    // Horas: prioridade ao texto exibido na planilha para preservar exatamente o horário original.
     const data = parseData(rRaw[mapa.data]) || parseData(rFmt[mapa.data]);
-    const hora = parseHora(rRaw[mapa.hora]) || parseHora(rFmt[mapa.hora]);
+    const hora = parseHora(rFmt[mapa.hora]) || parseHora(rRaw[mapa.hora]);
     const local = texto(rFmt[mapa.local]).toUpperCase();
     const matricula = texto(rFmt[mapa.matricula]);
     const nome = texto(rFmt[mapa.nome]).toUpperCase();

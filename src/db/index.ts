@@ -7,26 +7,41 @@ if (!databaseUrl) {
   throw new Error("DATABASE_URL is required");
 }
 
+/**
+ * Detecta automaticamente se o banco exige SSL (Neon, Supabase, etc.)
+ * e habilita a opcao `rejectUnauthorized: false` (necessaria em ambientes
+ * serverless como a Vercel, pois os certificados do pooler nem sempre
+ * sao validados pelo CA padrao do Node).
+ *
+ * O usuario pode forcar o comportamento com DATABASE_SSL=true/false.
+ */
+function deveUsarSSL(): boolean {
+  const force = process.env.DATABASE_SSL?.trim().toLowerCase();
+  if (force === "true" || force === "1") return true;
+  if (force === "false" || force === "0") return false;
+  // Auto-deteccao: Neon, Supabase, Render, etc. usam hosts com SSL obrigatorio
+  return /(neon\.tech|supabase\.(co|com)|aws\.neon|render\.com|db\.postgres)/i.test(
+    databaseUrl!
+  );
+}
+
 const globalForDb = globalThis as typeof globalThis & {
-  __arenaNextJsPostgresqlPool?: Pool;
+  __controleSaidasPool?: Pool;
 };
 
-// Bancos na nuvem (Supabase, Neon, etc.) exigem SSL na conexão.
-// Detecta automaticamente URLs do Supabase/Neon ou força com DATABASE_SSL=true.
-const precisaSsl =
-  process.env.DATABASE_SSL === "true" ||
-  databaseUrl.includes("supabase") ||
-  databaseUrl.includes("neon.tech");
+const ssl = deveUsarSSL() ? { rejectUnauthorized: false } : undefined;
 
 export const pool =
-  globalForDb.__arenaNextJsPostgresqlPool ??
+  globalForDb.__controleSaidasPool ??
   new Pool({
     connectionString: databaseUrl,
-    ssl: precisaSsl ? { rejectUnauthorized: false } : undefined,
+    ssl,
+    connectionTimeoutMillis: 15_000,
+    idleTimeoutMillis: 30_000,
   });
 
 if (process.env.NODE_ENV !== "production") {
-  globalForDb.__arenaNextJsPostgresqlPool = pool;
+  globalForDb.__controleSaidasPool = pool;
 }
 
 export const db = drizzle(pool);
