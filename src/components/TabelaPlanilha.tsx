@@ -8,11 +8,11 @@ import Brasao from "./Brasao";
 /**
  * Réplica em tela/impressão da planilha física de controle de saídas.
  *
- * Segue o mesmo layout posicional do formulário em papel (e o mesmo do
- * importador `src/lib/planilha.ts`): DATA | HORA | LOCAL | MATRÍCULA |
- * NOME | MOTIVO | REGIME — acrescendo Nº e OBSERVAÇÕES, como nas folhas
- * impressas usadas no setor. Cabeçalho em amarelo (cor da planilha física),
- * grade com bordas pretas e espaço para assinatura no rodapé.
+ * Colunas do formulário impresso: Nº · DATA · HORA · LOCAL · MOTIVO/
+ * PROCEDIMENTO · REGIME · OBSERVAÇÕES — matrícula e nome do servidor NÃO
+ * aparecem na folha (ficam disponíveis apenas no CSV exportado).
+ * Cabeçalho em amarelo (cor da planilha física), grade com bordas pretas
+ * e espaço para assinatura no rodapé.
  */
 
 /* ---------------- linhas da planilha ---------------- */
@@ -22,8 +22,8 @@ export interface LinhaPlanilhaVisual {
   data: string; // DD/MM/AAAA
   hora: string; // HH:MM
   local: string;
-  matricula: string;
-  nome: string;
+  matricula: string; // fora da folha impressa — mantida para o CSV exportado
+  nome: string; // fora da folha impressa — mantida para o CSV exportado
   motivo: string;
   regime: string; // SA | FE | CR
   obs: string; // situação + veículo/motorista, como na coluna de anotações
@@ -58,7 +58,7 @@ export function montarLinhasPlanilha(itens: Saida[]): LinhaPlanilhaVisual[] {
 
 /* ---------------- estilos compartilhados ---------------- */
 
-const COLUNAS = 9;
+const COLUNAS = 7;
 
 const TH =
   "border border-ink bg-hl-300 px-1.5 py-1.5 text-center text-[9px] font-extrabold uppercase leading-tight tracking-wider text-ink sm:text-[10px]";
@@ -218,8 +218,6 @@ export default function TabelaPlanilha({
                 <th className={`${TH} w-20`}>Data</th>
                 <th className={`${TH} w-16`}>Hora</th>
                 <th className={TH}>Local de destino</th>
-                <th className={`${TH} w-24`}>Matrícula</th>
-                <th className={TH}>Nome do servidor</th>
                 <th className={TH}>Motivo / Procedimento</th>
                 <th className={`${TH} w-16`}>Regime</th>
                 <th className={`${TH} w-32`}>Observações</th>
@@ -254,8 +252,6 @@ export default function TabelaPlanilha({
                     <td className={`${TD_CENTRO} font-semibold`}>{l.data}</td>
                     <td className={`${TD_CENTRO} font-display font-bold`}>{l.hora}</td>
                     <td className={`${TD} font-semibold`}>{l.local}</td>
-                    <td className={TD_CENTRO}>{l.matricula}</td>
-                    <td className={`${TD} font-semibold`}>{l.nome}</td>
                     <td className={TD}>{l.motivo}</td>
                     <td className={`${TD_CENTRO} text-xs font-extrabold`}>{l.regime}</td>
                     <td className={`${TD} text-[10px] text-ink-soft`}>{l.obs || "—"}</td>
