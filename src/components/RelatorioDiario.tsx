@@ -74,7 +74,7 @@ export default function RelatorioDiario({ usuarioNome }: { usuarioNome: string }
     if (linhas.length === 0) return;
     baixarCSV(
       `planilha-diaria-${dataBRParaISO(dataSel)}.csv`,
-      ["Nº", "Data", "Hora", "Local", "Matrícula", "Nome", "Motivo", "Regime", "Observações"],
+      ["Nº", "Data", "Hora", "Local", "Matrícula", "Nome", "Motivo", "Regime", "Viatura", "Motorista"],
       linhas.map((l) => [
         String(l.numero),
         l.data,
@@ -84,7 +84,8 @@ export default function RelatorioDiario({ usuarioNome }: { usuarioNome: string }
         l.nome,
         l.motivo,
         l.regime,
-        l.obs,
+        l.veiculo,
+        l.motorista,
       ])
     );
   }

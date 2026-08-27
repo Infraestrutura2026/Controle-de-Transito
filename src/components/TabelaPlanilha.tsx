@@ -9,8 +9,8 @@ import Brasao from "./Brasao";
  * Réplica em tela/impressão da planilha física de controle de saídas.
  *
  * Colunas do formulário impresso: Nº · DATA · HORA · LOCAL · MOTIVO/
- * PROCEDIMENTO · REGIME · OBSERVAÇÕES — matrícula e nome do servidor NÃO
- * aparecem na folha (ficam disponíveis apenas no CSV exportado).
+ * PROCEDIMENTO · REGIME · VIATURA · MOTORISTA — matrícula e nome do
+ * servidor NÃO aparecem na folha (ficam disponíveis apenas no CSV exportado).
  * Cabeçalho em amarelo (cor da planilha física), grade com bordas pretas
  * e espaço para assinatura no rodapé.
  */
@@ -26,7 +26,8 @@ export interface LinhaPlanilhaVisual {
   nome: string; // fora da folha impressa — mantida para o CSV exportado
   motivo: string;
   regime: string; // SA | FE | CR
-  obs: string; // situação + veículo/motorista, como na coluna de anotações
+  veiculo: string;
+  motorista: string;
 }
 
 /** Converte registros de saída em linhas da planilha (ordem dia → hora). */
@@ -35,30 +36,25 @@ export function montarLinhasPlanilha(itens: Saida[]): LinhaPlanilhaVisual[] {
     (a, b) =>
       `${a.data} ${a.hora}`.localeCompare(`${b.data} ${b.hora}`) || a.id - b.id
   );
-  return ordenadas.map((s, i) => {
-    const obs: string[] = [];
-    if (s.naoRealizada) {
-      obs.push(`NÃO REALIZADA${s.justificativa ? ` — ${s.justificativa}` : ""}`);
-    }
-    if (s.veiculo) obs.push(`VEÍC.: ${s.veiculo}`);
-    if (s.motorista) obs.push(`MOTOR.: ${s.motorista}`);
-    return {
-      numero: i + 1,
-      data: formatarDataBR(s.data),
-      hora: s.hora,
-      local: s.local,
-      matricula: s.matricula,
-      nome: s.nome,
-      motivo: s.motivo || "—",
-      regime: s.regime,
-      obs: obs.join(" · "),
-    };
-  });
+  return ordenadas.map((s, i) => ({
+    numero: i + 1,
+    data: formatarDataBR(s.data),
+    hora: s.hora,
+    local: s.local,
+    matricula: s.matricula,
+    nome: s.nome,
+    motivo: s.naoRealizada
+      ? `NÃO REALIZADA${s.justificativa ? ` — ${s.justificativa}` : ""}`
+      : s.motivo || "—",
+    regime: s.regime,
+    veiculo: s.veiculo ?? "",
+    motorista: s.motorista ?? "",
+  }));
 }
 
 /* ---------------- estilos compartilhados ---------------- */
 
-const COLUNAS = 7;
+const COLUNAS = 8;
 
 const TH =
   "border border-ink bg-hl-300 px-1.5 py-1.5 text-center text-[9px] font-extrabold uppercase leading-tight tracking-wider text-ink sm:text-[10px]";
@@ -220,7 +216,8 @@ export default function TabelaPlanilha({
                 <th className={TH}>Local de destino</th>
                 <th className={TH}>Motivo / Procedimento</th>
                 <th className={`${TH} w-16`}>Regime</th>
-                <th className={`${TH} w-32`}>Observações</th>
+                <th className={TH}>Viatura</th>
+                <th className={TH}>Motorista</th>
               </tr>
             </thead>
             <tbody>
@@ -254,7 +251,8 @@ export default function TabelaPlanilha({
                     <td className={`${TD} font-semibold`}>{l.local}</td>
                     <td className={TD}>{l.motivo}</td>
                     <td className={`${TD_CENTRO} text-xs font-extrabold`}>{l.regime}</td>
-                    <td className={`${TD} text-[10px] text-ink-soft`}>{l.obs || "—"}</td>
+                    <td className={`${TD} font-medium`}>{l.veiculo || "—"}</td>
+                    <td className={`${TD} font-medium`}>{l.motorista || "—"}</td>
                   </tr>
                 ))
               )}
