@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment, useMemo } from "react";
 import type { Saida } from "@/db/schema";
 import { formatarDataBR } from "@/lib/format";
 import { NOME_UNIDADE, SETOR_RESPONSAVEL } from "@/lib/unidade";
@@ -8,48 +9,187 @@ import Brasao from "./Brasao";
 /**
  * Réplica em tela/impressão da planilha física de controle de saídas.
  *
- * Colunas do formulário impresso: Nº · DATA · HORA · LOCAL · MOTIVO/
- * PROCEDIMENTO · REGIME · VIATURA · MOTORISTA — matrícula e nome do
- * servidor NÃO aparecem na folha (ficam disponíveis apenas no CSV exportado).
- * Cabeçalho em amarelo (cor da planilha física), grade com bordas pretas
- * e espaço para assinatura no rodapé.
+ * REGRAS DO DOCUMENTO (usado pelo Relatório Diário e pelo Consolidado por
+ * Período — qualquer alteração aqui vale para os dois):
+ *
+ * 1. Oito colunas, nesta ordem, **sem** coluna "Nº":
+ *    DATA DA SAÍDA · HORÁRIO PREVISTO PARA SAÍDA · LOCAL DA APRESENTAÇÃO ·
+ *    QUANT. PPL · TIPO DE APRESENTAÇÃO · REGIME · VIATURA · MOTORISTA.
+ *    A matrícula e o nome do servidor não aparecem na folha (ficam apenas no
+ *    CSV exportado). Cabeçalho em amarelo (cor da planilha física), grade com
+ *    bordas pretas e espaço para assinatura no rodapé.
+ *
+ * 2. Agrupamento: cada registro de `saidas` é **1 PPL**. Registros com a
+ *    mesma combinação data + hora + local + tipo + regime + viatura +
+ *    motorista + (não realizada/justificativa) formam um único bloco, e a
+ *    coluna QUANT. PPL traz o número de registros do bloco. A comparação é
+ *    feita com os textos normalizados (trim, espaços colapsados, maiúsculas
+ *    — ver `normalizar`). Ordem: data → hora → local → tipo de apresentação.
+ *
+ * 3. Mesclagem hierárquica com `rowSpan` (a célula só é escrita na primeira
+ *    linha do bloco): DATA = todas as linhas do mesmo dia; HORÁRIO = dia +
+ *    horário; LOCAL = dia + horário + local; QUANT. PPL, TIPO DE APRESENTAÇÃO
+ *    e REGIME nunca são mesclados (uma linha por grupo); VIATURA e MOTORISTA
+ *    mesclam sequências consecutivas de valor igual dentro do mesmo
+ *    dia + horário.
+ *
+ * 4. Separador de dias: entre um dia e outro entra uma faixa cinza ocupando
+ *    as 8 colunas (`className="h-2 border border-ink bg-stone-300 p-0"`).
+ *
+ * 5. Saídas não realizadas: o texto do tipo de apresentação vai riscado
+ *    (line-through) e ao lado, em vermelho e minúsculas,
+ *    "não realizada — {justificativa}". Não se escreve mais "NÃO REALIZADA"
+ *    dentro do motivo.
+ *
+ * 6. Totais: o rodapé soma **PPL** (total de registros), e não o número de
+ *    linhas agrupadas. As linhas em branco de `minimoLinhas` contam sobre as
+ *    linhas já agrupadas.
+ *
+ * 7. CSV: uma linha por PPL, com matrícula e nome, e o Quant. PPL do bloco a
+ *    que a pessoa pertence — ver `montarCsvPlanilha` /
+ *    `CABECALHO_CSV_PLANILHA` (usados pelos dois relatórios).
  */
 
-/* ---------------- linhas da planilha ---------------- */
+/* ---------------- agrupamento (1 registro = 1 PPL) ---------------- */
 
+const SEP = "\u0001";
+
+/** Normaliza texto para comparação: trim, espaços colapsados, maiúsculas. */
+function normalizar(valor: string | null | undefined): string {
+  return (valor ?? "").trim().replace(/\s+/g, " ").toUpperCase();
+}
+
+/** Situação da saída: realizada ou não realizada + justificativa. */
+function situacaoDe(s: Pick<Saida, "naoRealizada" | "justificativa">): string {
+  return s.naoRealizada ? `1${SEP}${normalizar(s.justificativa)}` : "0";
+}
+
+/** Chave de agrupamento do bloco (textos normalizados). */
+function chaveGrupo(s: Saida): string {
+  return [
+    s.data, // YYYY-MM-DD
+    s.hora, // HH:mm
+    normalizar(s.local),
+    normalizar(s.motivo),
+    normalizar(s.regime),
+    normalizar(s.veiculo),
+    normalizar(s.motorista),
+    situacaoDe(s),
+  ].join(SEP);
+}
+
+/** Ordem exigida pela planilha: data → hora → local → tipo (motivo). */
+function compararSaidas(a: Saida, b: Saida): number {
+  return (
+    a.data.localeCompare(b.data) ||
+    a.hora.localeCompare(b.hora) ||
+    normalizar(a.local).localeCompare(normalizar(b.local)) ||
+    normalizar(a.motivo).localeCompare(normalizar(b.motivo)) ||
+    normalizar(a.regime).localeCompare(normalizar(b.regime)) ||
+    normalizar(a.veiculo).localeCompare(normalizar(b.veiculo)) ||
+    normalizar(a.motorista).localeCompare(normalizar(b.motorista)) ||
+    situacaoDe(a).localeCompare(situacaoDe(b))
+  );
+}
+
+/** Uma linha da planilha = um bloco de PPL idênticas. */
 export interface LinhaPlanilhaVisual {
-  numero: number;
+  /** chave do bloco + índice — usada como key do React */
+  chave: string;
   data: string; // DD/MM/AAAA
   hora: string; // HH:MM
   local: string;
-  matricula: string; // fora da folha impressa — mantida para o CSV exportado
-  nome: string; // fora da folha impressa — mantida para o CSV exportado
-  motivo: string;
+  /** número de PPL no bloco (cada registro de saída = 1 PPL) */
+  quant: number;
+  tipo: string; // tipo de apresentação (motivo / procedimento)
   regime: string; // SA | FE | CR
   veiculo: string;
   motorista: string;
+  naoRealizada: boolean;
+  justificativa: string;
+  /** matrícula e nome ficam fora da folha impressa — apenas no CSV */
+  matricula: string;
+  nome: string;
 }
 
-/** Converte registros de saída em linhas da planilha (ordem dia → hora). */
+/** Converte registros de saída em linhas agrupadas da planilha. */
 export function montarLinhasPlanilha(itens: Saida[]): LinhaPlanilhaVisual[] {
   const ordenadas = [...itens].sort(
-    (a, b) =>
-      `${a.data} ${a.hora}`.localeCompare(`${b.data} ${b.hora}`) || a.id - b.id
+    (a, b) => compararSaidas(a, b) || a.id - b.id
   );
-  return ordenadas.map((s, i) => ({
-    numero: i + 1,
-    data: formatarDataBR(s.data),
-    hora: s.hora,
-    local: s.local,
-    matricula: s.matricula,
-    nome: s.nome,
-    motivo: s.naoRealizada
-      ? `NÃO REALIZADA${s.justificativa ? ` — ${s.justificativa}` : ""}`
-      : s.motivo || "—",
-    regime: s.regime,
-    veiculo: s.veiculo ?? "",
-    motorista: s.motorista ?? "",
-  }));
+
+  const linhas: LinhaPlanilhaVisual[] = [];
+  let chaveAnterior: string | null = null;
+
+  for (const s of ordenadas) {
+    const chave = chaveGrupo(s);
+    const anterior = linhas[linhas.length - 1];
+    if (anterior && chaveAnterior === chave) {
+      anterior.quant += 1; // mesma PPL de bloco: só aumenta a quantidade
+      continue;
+    }
+    chaveAnterior = chave;
+    linhas.push({
+      chave: `${chave}${SEP}${linhas.length}`,
+      data: formatarDataBR(s.data),
+      hora: s.hora,
+      local: s.local,
+      quant: 1,
+      tipo: s.motivo.trim() ? s.motivo.trim() : "—",
+      regime: s.regime,
+      veiculo: s.veiculo ?? "",
+      motorista: s.motorista ?? "",
+      naoRealizada: s.naoRealizada,
+      justificativa: s.justificativa.trim(),
+      matricula: s.matricula,
+      nome: s.nome,
+    });
+  }
+
+  return linhas;
+}
+
+/** Cabeçalho do CSV dos relatórios em formato de planilha. */
+export const CABECALHO_CSV_PLANILHA = [
+  "Data da saída",
+  "Horário previsto para saída",
+  "Local da apresentação",
+  "Quant. PPL",
+  "Matrícula",
+  "Nome",
+  "Tipo de apresentação",
+  "Regime",
+  "Viatura",
+  "Motorista",
+];
+
+/**
+ * Linhas do CSV: uma por PPL (matrícula e nome inclusos), na mesma ordem da
+ * folha, com o Quant. PPL do bloco ao qual a pessoa pertence.
+ */
+export function montarCsvPlanilha(itens: Saida[]): string[][] {
+  const ordenadas = [...itens].sort(
+    (a, b) => compararSaidas(a, b) || a.id - b.id
+  );
+
+  const quantidadePorBloco = new Map<string, number>();
+  for (const s of ordenadas) {
+    const chave = chaveGrupo(s);
+    quantidadePorBloco.set(chave, (quantidadePorBloco.get(chave) ?? 0) + 1);
+  }
+
+  return ordenadas.map((s) => [
+    formatarDataBR(s.data),
+    s.hora,
+    s.local,
+    String(quantidadePorBloco.get(chaveGrupo(s)) ?? 1),
+    s.matricula,
+    s.nome,
+    s.motivo.trim() ? s.motivo.trim() : "—",
+    s.regime,
+    s.veiculo ?? "",
+    s.motorista ?? "",
+  ]);
 }
 
 /* ---------------- estilos compartilhados ---------------- */
@@ -58,8 +198,87 @@ const COLUNAS = 8;
 
 const TH =
   "border border-ink bg-hl-300 px-1.5 py-1.5 text-center text-[9px] font-extrabold uppercase leading-tight tracking-wider text-ink sm:text-[10px]";
-const TD = "break-words border border-ink px-1.5 py-1 align-top text-[10.5px] leading-snug sm:text-xs";
+const TD =
+  "break-words border border-ink px-1.5 py-1 align-top text-[10.5px] leading-snug sm:text-xs";
 const TD_CENTRO = `${TD} text-center tabular-nums`;
+/** Célula mesclada (rowSpan): centrada no bloco que ela representa. */
+const TD_MESCLADA = `${TD} align-middle font-semibold`;
+
+/* ---------------- mesclagem hierárquica (rowSpan) ---------------- */
+
+interface Celula {
+  inicia: boolean;
+  rowSpan: number;
+}
+
+interface LinhaLayout {
+  linha: LinhaPlanilhaVisual;
+  /** faixa cinza de separação antes desta linha (mudou o dia) */
+  separadorAntes: boolean;
+  dia: Celula;
+  hora: Celula;
+  local: Celula;
+  veiculo: Celula;
+  motorista: Celula;
+}
+
+/** Marca a primeira linha de cada bloco de chaves consecutivas iguais. */
+function marcarBlocos(
+  total: number,
+  chave: (i: number) => string
+): { inicia: boolean[]; rowSpan: number[] } {
+  const inicia = Array.from({ length: total }, () => false);
+  const rowSpan = Array.from({ length: total }, () => 0);
+  let i = 0;
+  while (i < total) {
+    let j = i + 1;
+    while (j < total && chave(j) === chave(i)) j += 1;
+    inicia[i] = true;
+    rowSpan[i] = j - i;
+    i = j;
+  }
+  return { inicia, rowSpan };
+}
+
+const celula = (
+  marca: { inicia: boolean[]; rowSpan: number[] },
+  i: number
+): Celula => ({ inicia: marca.inicia[i], rowSpan: marca.rowSpan[i] });
+
+/** rowSpan só é necessário quando o bloco tem mais de uma linha. */
+const rowSpanDe = (c: Celula): number | undefined => (c.rowSpan > 1 ? c.rowSpan : undefined);
+
+/**
+ * Calcula quais células aparecem em cada linha e com que rowSpan, seguindo a
+ * hierarquia da folha: dia → horário → local; viatura/motorista mesclam por
+ * sequência consecutiva de valor igual dentro do mesmo dia + horário.
+ */
+function montarLayout(linhas: LinhaPlanilhaVisual[]): LinhaLayout[] {
+  const n = linhas.length;
+  const chaveDia = (i: number) => linhas[i].data;
+  const chaveHora = (i: number) => `${linhas[i].data}${SEP}${linhas[i].hora}`;
+  const chaveLocal = (i: number) =>
+    `${chaveHora(i)}${SEP}${normalizar(linhas[i].local)}`;
+  const chaveVeiculo = (i: number) => `${chaveHora(i)}${SEP}${normalizar(linhas[i].veiculo)}`;
+  const chaveMotorista = (i: number) =>
+    `${chaveHora(i)}${SEP}${normalizar(linhas[i].motorista)}`;
+
+  const dia = marcarBlocos(n, chaveDia);
+  const hora = marcarBlocos(n, chaveHora);
+  const local = marcarBlocos(n, chaveLocal);
+  const veiculo = marcarBlocos(n, chaveVeiculo);
+  const motorista = marcarBlocos(n, chaveMotorista);
+
+  return linhas.map((linha, i) => ({
+    linha,
+    separadorAntes: i > 0 && linhas[i - 1].data !== linha.data,
+    dia: celula(dia, i),
+    hora: celula(hora, i),
+    local: celula(local, i),
+    veiculo: celula(veiculo, i),
+    motorista: celula(motorista, i),
+  }));
+}
 
 /* ---------------- resumo por dia (quadro auxiliar) ---------------- */
 
@@ -83,7 +302,8 @@ function QuadroResumoDia({ resumo }: { resumo: LinhaResumoDia[] }) {
   );
   const THQ =
     "border border-ink bg-hl-300 px-2 py-1 text-center text-[9px] font-extrabold uppercase tracking-wider text-ink sm:text-[10px]";
-  const TDQ = "border border-ink px-2 py-1 text-center tabular-nums text-[10.5px] sm:text-xs";
+  const TDQ =
+    "border border-ink px-2 py-1 text-center tabular-nums text-[10.5px] sm:text-xs";
   return (
     <div className="px-3 pb-3 pt-4 sm:px-4">
       <p className="mb-1.5 text-center text-[10px] font-extrabold uppercase tracking-[0.18em] sm:text-[11px]">
@@ -94,7 +314,7 @@ function QuadroResumoDia({ resumo }: { resumo: LinhaResumoDia[] }) {
           <thead>
             <tr>
               <th className={THQ}>Data</th>
-              <th className={THQ}>Saídas</th>
+              <th className={THQ}>PPL</th>
               <th className={THQ}>SA</th>
               <th className={THQ}>FE</th>
               <th className={THQ}>CR</th>
@@ -131,12 +351,13 @@ interface PropsTabelaPlanilha {
   titulo?: string;
   /** Linha de contexto sob o título, ex.: "Movimento do dia 25/08/2026". */
   contexto?: string;
+  /** Linhas já agrupadas por montarLinhasPlanilha (1 linha = 1 bloco de PPL). */
   linhas: LinhaPlanilhaVisual[];
   /** Mantém linhas em branco no fim, como no formulário de papel. */
   minimoLinhas?: number;
   /** Rótulo da faixa de fechamento. */
   rotuloTotais?: string;
-  /** Totais por regime; se omitido, são contados a partir das linhas. */
+  /** Totais por regime em PPL; se omitido, somam-se as linhas agrupadas. */
   totais?: { SA: number; FE: number; CR: number };
   /** Quadro auxiliar abaixo da planilha (usado no consolidado). */
   resumoPorDia?: LinhaResumoDia[];
@@ -158,18 +379,23 @@ export default function TabelaPlanilha({
   usuarioNome,
   atualizadoAs,
 }: PropsTabelaPlanilha) {
+  const layout = useMemo(() => montarLayout(linhas), [linhas]);
+
+  // Total de PPL = soma dos registros, não o número de linhas agrupadas.
+  const totalPpl = linhas.reduce((acc, l) => acc + l.quant, 0);
   const contagem =
     totais ??
     linhas.reduce(
       (acc, l) => {
         if (l.regime === "SA" || l.regime === "FE" || l.regime === "CR") {
-          acc[l.regime] += 1;
+          acc[l.regime] += l.quant;
         }
         return acc;
       },
       { SA: 0, FE: 0, CR: 0 }
     );
 
+  // As linhas em branco de sobra contam sobre as linhas já agrupadas.
   const linhasVazias = Math.max(0, minimoLinhas - linhas.length);
 
   return (
@@ -201,7 +427,11 @@ export default function TabelaPlanilha({
             <span>
               Emitido por: <b className="text-ink">{usuarioNome}</b>
             </span>
-            <span>{atualizadoAs ? `Atualizado às ${atualizadoAs}` : "Documento gerado eletronicamente"}</span>
+            <span>
+              {atualizadoAs
+                ? `Atualizado às ${atualizadoAs}`
+                : "Documento gerado eletronicamente"}
+            </span>
           </div>
         </div>
 
@@ -210,14 +440,14 @@ export default function TabelaPlanilha({
           <table className="w-full border-collapse">
             <thead>
               <tr>
-                <th className={`${TH} w-9`}>Nº</th>
-                <th className={`${TH} w-20`}>Data</th>
-                <th className={`${TH} w-16`}>Hora</th>
-                <th className={TH}>Local de destino</th>
-                <th className={TH}>Motivo / Procedimento</th>
+                <th className={`${TH} w-20`}>Data da saída</th>
+                <th className={`${TH} w-20`}>Horário previsto para saída</th>
+                <th className={TH}>Local da apresentação</th>
+                <th className={`${TH} w-12`}>Quant. PPL</th>
+                <th className={TH}>Tipo de apresentação</th>
                 <th className={`${TH} w-16`}>Regime</th>
-                <th className={TH}>Viatura</th>
-                <th className={TH}>Motorista</th>
+                <th className={`${TH} w-24`}>Viatura</th>
+                <th className={`${TH} w-28`}>Motorista</th>
               </tr>
             </thead>
             <tbody>
@@ -240,21 +470,89 @@ export default function TabelaPlanilha({
                   </td>
                 </tr>
               ) : (
-                linhas.map((l) => (
-                  <tr
-                    key={l.numero}
-                    className="linha-planilha transition-colors hover:bg-hl-100/60 print:hover:bg-transparent"
-                  >
-                    <td className={`${TD_CENTRO} text-ink-soft`}>{l.numero}</td>
-                    <td className={`${TD_CENTRO} font-semibold`}>{l.data}</td>
-                    <td className={`${TD_CENTRO} font-display font-bold`}>{l.hora}</td>
-                    <td className={`${TD} font-semibold`}>{l.local}</td>
-                    <td className={TD}>{l.motivo}</td>
-                    <td className={`${TD_CENTRO} text-xs font-extrabold`}>{l.regime}</td>
-                    <td className={`${TD} font-medium`}>{l.veiculo || "—"}</td>
-                    <td className={`${TD} font-medium`}>{l.motorista || "—"}</td>
-                  </tr>
-                ))
+                layout.map((celulas) => {
+                  const l = celulas.linha;
+                  const motivoNaoRealizado = (
+                    <span className="text-[9.5px] font-bold lowercase text-cr-700 sm:text-[10px]">
+                      {`não realizada${l.justificativa ? ` — ${l.justificativa}` : ""}`}
+                    </span>
+                  );
+                  return (
+                    <Fragment key={l.chave}>
+                      {/* faixa cinza entre um dia e outro */}
+                      {celulas.separadorAntes ? (
+                        <tr>
+                          <td
+                            colSpan={COLUNAS}
+                            className="h-2 border border-ink bg-stone-300 p-0"
+                          />
+                        </tr>
+                      ) : null}
+                      <tr className="linha-planilha transition-colors hover:bg-hl-100/60 print:hover:bg-transparent">
+                        {celulas.dia.inicia ? (
+                          <td
+                            rowSpan={rowSpanDe(celulas.dia)}
+                            className={`${TD_MESCLADA} text-center font-display text-xs font-bold sm:text-[13px]`}
+                          >
+                            {l.data}
+                          </td>
+                        ) : null}
+                        {celulas.hora.inicia ? (
+                          <td
+                            rowSpan={rowSpanDe(celulas.hora)}
+                            className={`${TD_MESCLADA} text-center font-display tabular-nums`}
+                          >
+                            {l.hora}
+                          </td>
+                        ) : null}
+                        {celulas.local.inicia ? (
+                          <td
+                            rowSpan={rowSpanDe(celulas.local)}
+                            className={TD_MESCLADA}
+                          >
+                            {l.local}
+                          </td>
+                        ) : null}
+                        <td
+                          className={`${TD_CENTRO} font-display text-xs font-extrabold`}
+                        >
+                          {l.quant}
+                        </td>
+                        <td className={TD}>
+                          {l.naoRealizada ? (
+                            <>
+                              <span className="text-ink-soft line-through decoration-cr-700/70">
+                                {l.tipo}
+                              </span>
+                              <span className="ml-1.5">{motivoNaoRealizado}</span>
+                            </>
+                          ) : (
+                            l.tipo
+                          )}
+                        </td>
+                        <td className={`${TD_CENTRO} text-xs font-extrabold`}>
+                          {l.regime}
+                        </td>
+                        {celulas.veiculo.inicia ? (
+                          <td
+                            rowSpan={rowSpanDe(celulas.veiculo)}
+                            className={TD_MESCLADA}
+                          >
+                            {l.veiculo || "—"}
+                          </td>
+                        ) : null}
+                        {celulas.motorista.inicia ? (
+                          <td
+                            rowSpan={rowSpanDe(celulas.motorista)}
+                            className={TD_MESCLADA}
+                          >
+                            {l.motorista || "—"}
+                          </td>
+                        ) : null}
+                      </tr>
+                    </Fragment>
+                  );
+                })
               )}
 
               {/* linhas em branco remanescentes, como na folha impressa */}
@@ -269,7 +567,7 @@ export default function TabelaPlanilha({
                   </tr>
                 ))}
 
-              {/* faixa de fechamento com totais */}
+              {/* faixa de fechamento com totais em PPL */}
               {!carregando && linhas.length > 0 && (
                 <tr className="linha-planilha bg-hl-100 font-extrabold">
                   <td
@@ -279,7 +577,7 @@ export default function TabelaPlanilha({
                     {rotuloTotais}
                   </td>
                   <td className="border border-ink px-1.5 py-1.5 text-center font-display text-xs tabular-nums">
-                    {linhas.length}
+                    {totalPpl}
                   </td>
                   <td className="border border-ink px-1.5 py-1.5 text-center text-[9.5px] uppercase tracking-wide sm:text-[10px]">
                     SA: {contagem.SA} · FE: {contagem.FE} · CR: {contagem.CR}
