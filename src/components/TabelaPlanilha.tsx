@@ -25,9 +25,11 @@ import Brasao from "./Brasao";
  *    coluna QUANT. PPL traz o número de registros do bloco. A comparação é
  *    feita com os textos normalizados (trim, espaços colapsados, maiúsculas
  *    — ver `normalizar`). Ordem: data → hora → local → tipo de apresentação.
- *    Exceção: blocos formados apenas por registros de automação (nome
- *    "AUTOMAÇÃO") não são PPL — a coluna QUANT. PPL exibe "—" (o mesmo vale
- *    para o CSV).
+ *    Exceção: blocos de automação (nome "AUTOMAÇÃO") ou de serviço rotineiro
+ *    (local "TRANSPORTE DE ALIMENTAÇÃO" / "RETIRADA DO LIXO") não são PPL —
+ *    as colunas QUANT. PPL, TIPO DE APRESENTAÇÃO e REGIME exibem "—" (o
+ *    mesmo vale para o CSV); o horário previsto continua como nos horários
+ *    rotineiros.
  *
  * 3. Mesclagem hierárquica com `rowSpan` (a célula só é escrita na primeira
  *    linha do bloco): DATA = todas as linhas do mesmo dia; HORÁRIO = dia +
@@ -62,12 +64,22 @@ function normalizar(valor: string | null | undefined): string {
   return (valor ?? "").trim().replace(/\s+/g, " ").toUpperCase();
 }
 
+/** Locais de serviço rotineiro: não são apresentação de PPL. */
+const LOCAIS_ROTINEIROS = new Set([
+  "TRANSPORTE DE ALIMENTAÇÃO",
+  "RETIRADA DO LIXO",
+]);
+
 /**
- * Registros de automação (nome "AUTOMAÇÃO") não são pessoas: não faz sentido
- * contá-los como PPL. Nesses blocos a coluna QUANT. PPL exibe "—".
+ * Blocos sem PPL: registros de automação (nome "AUTOMAÇÃO") não são pessoas, e
+ * os serviços rotineiros (transporte de alimentação / retirada do lixo) não são
+ * apresentação — não faz sentido contá-los como PPL nem descrevê-los como tal.
+ * Nesses blocos as colunas QUANT. PPL, TIPO DE APRESENTAÇÃO e REGIME exibem
+ * "—"; o horário previsto segue o comportamento dos horários rotineiros.
  */
-const eAutomacao = (s: Pick<Saida, "nome">): boolean =>
-  normalizar(s.nome) === "AUTOMAÇÃO";
+const eSemPpl = (s: Pick<Saida, "nome" | "local">): boolean =>
+  normalizar(s.nome) === "AUTOMAÇÃO" ||
+  LOCAIS_ROTINEIROS.has(normalizar(s.local));
 
 /** Situação da saída: realizada ou não realizada + justificativa. */
 function situacaoDe(s: Pick<Saida, "naoRealizada" | "justificativa">): string {
@@ -115,8 +127,12 @@ export interface LinhaPlanilhaVisual {
   local: string;
   /** número de PPL no bloco (cada registro de saída = 1 PPL) */
   quant: number;
-  /** bloco formado só por registros de automação (nome "AUTOMAÇÃO") */
-  automacao: boolean;
+  /**
+   * bloco sem PPL: automação (nome "AUTOMAÇÃO") ou serviço rotineiro
+   * (transporte de alimentação / retirada do lixo) — quant, tipo e regime
+   * exibem "—"
+   */
+  semPpl: boolean;
   tipo: string; // tipo de apresentação (motivo / procedimento)
   regime: string; // SA | FE | CR
   veiculo: string;
@@ -142,8 +158,8 @@ export function montarLinhasPlanilha(itens: Saida[]): LinhaPlanilhaVisual[] {
     const anterior = linhas[linhas.length - 1];
     if (anterior && chaveAnterior === chave) {
       anterior.quant += 1; // mesma PPL de bloco: só aumenta a quantidade
-      // Só mantém o traço se TODO o bloco for de automação (não são PPL).
-      anterior.automacao = anterior.automacao && eAutomacao(s);
+      // Só mantém o traço se TODO o bloco for sem PPL (não são PPL).
+      anterior.semPpl = anterior.semPpl && eSemPpl(s);
       continue;
     }
     chaveAnterior = chave;
@@ -154,7 +170,7 @@ export function montarLinhasPlanilha(itens: Saida[]): LinhaPlanilhaVisual[] {
       horarioPrevisto: s.horarioPrevisto ?? "",
       local: s.local,
       quant: 1,
-      automacao: eAutomacao(s),
+      semPpl: eSemPpl(s),
       tipo: s.motivo.trim() ? s.motivo.trim() : "—",
       regime: s.regime,
       veiculo: s.veiculo ?? "",
@@ -198,19 +214,23 @@ export function montarCsvPlanilha(itens: Saida[]): string[][] {
     quantidadePorBloco.set(chave, (quantidadePorBloco.get(chave) ?? 0) + 1);
   }
 
-  return ordenadas.map((s) => [
-    formatarDataBR(s.data),
-    s.horarioPrevisto || s.hora,
-    s.local,
-    // Registros de automação não são PPL: exibem o traço no lugar da contagem.
-    eAutomacao(s) ? "—" : String(quantidadePorBloco.get(chaveGrupo(s)) ?? 1),
-    s.matricula,
-    s.nome,
-    s.motivo.trim() ? s.motivo.trim() : "—",
-    s.regime,
-    s.veiculo ?? "",
-    s.motorista ?? "",
-  ]);
+  return ordenadas.map((s) => {
+    // Automação / serviço rotineiro: não são PPL — traço no lugar da
+    // contagem, do tipo de apresentação e do regime.
+    const semPpl = eSemPpl(s);
+    return [
+      formatarDataBR(s.data),
+      s.horarioPrevisto || s.hora,
+      s.local,
+      semPpl ? "—" : String(quantidadePorBloco.get(chaveGrupo(s)) ?? 1),
+      s.matricula,
+      s.nome,
+      semPpl ? "—" : s.motivo.trim() ? s.motivo.trim() : "—",
+      semPpl ? "—" : s.regime,
+      s.veiculo ?? "",
+      s.motorista ?? "",
+    ];
+  });
 }
 
 /* ---------------- estilos compartilhados ---------------- */
@@ -542,10 +562,12 @@ export default function TabelaPlanilha({
                         <td
                           className={`${TD_CENTRO} font-display text-xs font-extrabold`}
                         >
-                          {l.automacao ? "—" : l.quant}
+                          {l.semPpl ? "—" : l.quant}
                         </td>
                         <td className={TD}>
-                          {l.naoRealizada ? (
+                          {l.semPpl ? (
+                            "—"
+                          ) : l.naoRealizada ? (
                             <>
                               <span className="text-ink-soft line-through decoration-cr-700/70">
                                 {l.tipo}
@@ -557,7 +579,7 @@ export default function TabelaPlanilha({
                           )}
                         </td>
                         <td className={`${TD_CENTRO} text-xs font-extrabold`}>
-                          {l.regime}
+                          {l.semPpl ? "—" : l.regime}
                         </td>
                         {celulas.veiculo.inicia ? (
                           <td
