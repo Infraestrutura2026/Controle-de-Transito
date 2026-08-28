@@ -7,6 +7,50 @@ export function ehTipo(v: string): v is Tipo {
 
 export const MAX_REGIME_OUTRO = 50;
 
+type PartesAgoraSP = {
+  ano: string;
+  mes: string;
+  dia: string;
+  hora: string;
+  minuto: string;
+  semana: string;
+};
+
+function agoraSP(): PartesAgoraSP {
+  const partes = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    weekday: "long",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+
+  const valor = (tipo: string) => partes.find((parte) => parte.type === tipo)?.value ?? "";
+  return {
+    ano: valor("year"),
+    mes: valor("month"),
+    dia: valor("day"),
+    hora: valor("hour"),
+    minuto: valor("minute"),
+    semana: valor("weekday"),
+  };
+}
+
+/** Data ISO de hoje (AAAA-MM-DD), no fuso de São Paulo. */
+export function hojeISO(): string {
+  const { ano, mes, dia } = agoraSP();
+  return `${ano}-${mes}-${dia}`;
+}
+
+/** Hora atual (HH:MM), no fuso de São Paulo. */
+export function horaAtualHHMM(): string {
+  const { hora, minuto } = agoraSP();
+  return `${hora}:${minuto}`;
+}
+
 /** Locais de destino mais comuns (sugestões no formulário). */
 export const LOCAIS_BASE = [
   "IMEC SÃO PAULO",
@@ -62,20 +106,6 @@ export interface DadosSaida {
   horarioPrevisto?: string;
   naoRealizada?: boolean;
   justificativa?: string;
-}
-
-/** Data ISO de hoje (AAAA-MM-DD). */
-export function hojeISO(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")}`;
-}
-
-/** Hora local atual (HH:MM). */
-export function horaAtualHHMM(): string {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 /** Normaliza entradas de hora como "7:00" ou "0700" para "07:00". */

@@ -1,3 +1,35 @@
+type PartesAgoraSP = {
+  ano: string;
+  mes: string;
+  dia: string;
+  hora: string;
+  minuto: string;
+  semana: string;
+};
+
+function agoraSP(): PartesAgoraSP {
+  const partes = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    weekday: "long",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+
+  const valor = (tipo: string) => partes.find((parte) => parte.type === tipo)?.value ?? "";
+  return {
+    ano: valor("year"),
+    mes: valor("month"),
+    dia: valor("day"),
+    hora: valor("hour"),
+    minuto: valor("minute"),
+    semana: valor("weekday"),
+  };
+}
+
 /** Converte "AAAA-MM-DD" para "DD/MM/AAAA". */
 export function formatarDataBR(iso: string): string {
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(iso)) return iso;
@@ -33,38 +65,35 @@ export function dataBRParaISO(br: string): string {
   return `${a}-${m}-${d}`;
 }
 
-/** Data local de hoje no formato AAAA-MM-DD (uso interno/API). */
+/** Data de hoje no formato AAAA-MM-DD, no fuso de São Paulo. */
 export function hojeISO(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")}`;
+  const { ano, mes, dia } = agoraSP();
+  return `${ano}-${mes}-${dia}`;
 }
 
-/** Data local de hoje no formato visual DD/MM/AAAA. */
+/** Data de hoje no formato visual DD/MM/AAAA, no fuso de São Paulo. */
 export function hojeBR(): string {
   return formatarDataBR(hojeISO());
 }
 
-/** Primeiro dia do mês atual em DD/MM/AAAA. */
+/** Primeiro dia do mês atual em DD/MM/AAAA, no fuso de São Paulo. */
 export function primeiroDiaMesBR(): string {
-  const d = new Date();
-  return `01/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+  const { ano, mes } = agoraSP();
+  return `01/${mes}/${ano}`;
 }
 
-/** Data de N dias atrás em DD/MM/AAAA. */
+/** Data de N dias atrás em DD/MM/AAAA, calculada no calendário de São Paulo. */
 export function diasAtrasBR(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(
+  const agora = agoraSP();
+  const data = new Date(Date.UTC(Number(agora.ano), Number(agora.mes) - 1, Number(agora.dia) - n));
+  return `${String(data.getUTCDate()).padStart(2, "0")}/${String(data.getUTCMonth() + 1).padStart(
     2,
     "0"
-  )}/${d.getFullYear()}`;
+  )}/${data.getUTCFullYear()}`;
 }
 
 /** Ex.: "terça-feira, 25/08/2026" — sempre no padrão brasileiro. */
 export function dataLongaBR(): string {
-  const agora = new Date();
-  const semana = agora.toLocaleDateString("pt-BR", { weekday: "long" });
-  return `${semana}, ${hojeBR()}`;
+  const { ano, mes, dia, semana } = agoraSP();
+  return `${semana}, ${dia}/${mes}/${ano}`;
 }
