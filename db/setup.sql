@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS saidas (
   regime         TEXT NOT NULL DEFAULT 'FE', -- SA | FE | CR
   veiculo        TEXT NOT NULL DEFAULT '', -- veículo do serviço (admin)
   motorista      TEXT NOT NULL DEFAULT '', -- motorista do serviço (admin)
+  horario_previsto TEXT NOT NULL DEFAULT '', -- horário previsto para saída (admin, HH:mm)
   nao_realizada  BOOLEAN NOT NULL DEFAULT FALSE,
   justificativa  TEXT NOT NULL DEFAULT '', -- motivo da não realização (máx. 50)
   criado_por_nome TEXT NOT NULL DEFAULT 'Sistema',
