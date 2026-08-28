@@ -375,7 +375,7 @@ export default function Dashboard({
       />
 
       {/* ---------- Conteúdo Principal à Direita da Sidebar ---------- */}
-      <div className="pt-14 lg:pt-0 lg:pl-64 transition-all">
+      <div className="pt-14 lg:pt-0 lg:pl-64 transition-all print:p-0 print:pl-0 print:pt-0">
         {/* Banner Superior da Página */}
         <header className="border-b border-line bg-surface px-4 py-4 sm:px-8 print:hidden">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -419,7 +419,7 @@ export default function Dashboard({
           </div>
         </header>
 
-        <main className="p-4 sm:p-8">
+        <main className="p-4 sm:p-8 print:p-0">
           {/* ABA RELATÓRIOS (menu com vários relatórios para administradores) */}
           {abaAtiva === "relatorio" && (
             <Relatorios usuarioNome={operador.nome} />
