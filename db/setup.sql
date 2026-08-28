@@ -50,7 +50,8 @@ CREATE TABLE IF NOT EXISTS saidas (
   matricula      TEXT NOT NULL,           -- matrícula do servidor que vai sair
   nome           TEXT NOT NULL,
   motivo         TEXT NOT NULL DEFAULT '',-- procedimento / motivo
-  regime         TEXT NOT NULL DEFAULT 'FE', -- SA | FE | CR
+  regime         TEXT NOT NULL DEFAULT 'FE', -- RSA | FE | CR | OUTRO
+  regime_outro   TEXT NOT NULL DEFAULT '', -- descrição quando regime = OUTRO (máx. 50)
   veiculo        TEXT NOT NULL DEFAULT '', -- veículo do serviço (admin)
   motorista      TEXT NOT NULL DEFAULT '', -- motorista do serviço (admin)
   horario_previsto TEXT NOT NULL DEFAULT '', -- horário previsto para saída (admin, HH:mm)

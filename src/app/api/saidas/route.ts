@@ -96,7 +96,7 @@ export async function GET(req: Request) {
       .from(saidas)
       .where(ondeEscopo)
       .groupBy(saidas.regime);
-    const porRegime: Record<string, number> = { SA: 0, FE: 0, CR: 0 };
+    const porRegime: Record<string, number> = { RSA: 0, FE: 0, CR: 0, OUTRO: 0 };
     for (const r of porRegimeR) porRegime[r.regime] = Number(r.n);
 
     const locais = await db
@@ -140,6 +140,10 @@ export async function POST(req: Request) {
       valores.horarioPrevisto = "";
       valores.naoRealizada = false;
       valores.justificativa = "";
+    }
+    // regimeOutro só é válido quando regime = OUTRO
+    if (valores.regime !== "OUTRO") {
+      valores.regimeOutro = "";
     }
     const [linha] = await db.insert(saidas).values(valores).returning();
     return NextResponse.json(linha, { status: 201 });

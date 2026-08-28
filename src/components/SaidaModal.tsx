@@ -5,6 +5,7 @@ import type { Saida } from "@/db/schema";
 import {
   LOCAIS_BASE,
   MAX_JUSTIFICATIVA,
+  MAX_REGIME_OUTRO,
   MOTIVOS_BASE,
   TIPOS,
   horaAtualHHMM,
@@ -39,6 +40,7 @@ function estadoInicial(editando: Saida | null): DadosSaida {
       nome: editando.nome,
       motivo: editando.motivo,
       regime: editando.regime,
+      regimeOutro: editando.regimeOutro ?? "",
       veiculo: editando.veiculo ?? "",
       motorista: editando.motorista ?? "",
       horarioPrevisto: editando.horarioPrevisto ?? "",
@@ -54,6 +56,7 @@ function estadoInicial(editando: Saida | null): DadosSaida {
     nome: "",
     motivo: "",
     regime: "FE",
+    regimeOutro: "",
     veiculo: "",
     motorista: "",
     horarioPrevisto: "",
@@ -331,24 +334,35 @@ export default function SaidaModal({ editando, locais, ehAdmin, aoFechar, aoSalv
           <div className="mt-3">
             <p className="mb-1 text-xs font-semibold text-ink-soft">
               Regime <span className="text-cr-700">*</span>
-              <span className="ml-1 font-normal text-ink-mute">(SA, FE ou CR — conforme planilha)</span>
+              <span className="ml-1 font-normal text-ink-mute">(RSA, FE, CR ou OUTRO — conforme planilha)</span>
             </p>
-            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Regime da saída">
+            <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label="Regime da saída">
               {TIPOS.map((t) => {
                 const ativo = form.regime === t;
                 const borda =
-                  t === "SA"
+                  t === "RSA"
                     ? "border-sa-700 bg-sa-100/60 text-sa-700"
                     : t === "CR"
                       ? "border-cr-700 bg-cr-100/60 text-cr-700"
-                      : "border-stone-500 bg-stone-200/60 text-stone-700";
+                      : t === "OUTRO"
+                        ? "border-amber-600 bg-amber-100/60 text-amber-700"
+                        : "border-stone-500 bg-stone-200/60 text-stone-700";
                 return (
                   <button
                     key={t}
                     type="button"
                     role="radio"
                     aria-checked={ativo}
-                    onClick={() => mudar("regime", t)}
+                    onClick={() => {
+                      setForm((f) => ({ ...f, regime: t, regimeOutro: t === "OUTRO" ? f.regimeOutro : "" }));
+                      setErros((e) => {
+                        if (!e.regime) return e;
+                        const copia = { ...e };
+                        delete copia.regime;
+                        delete copia.regimeOutro;
+                        return copia;
+                      });
+                    }}
                     className={`rounded-lg border-2 px-3 py-2 font-display text-sm font-bold tracking-wider transition-all ${
                       ativo ? borda : "border-line text-ink-mute hover:border-line-strong hover:text-ink"
                     }`}
@@ -359,6 +373,44 @@ export default function SaidaModal({ editando, locais, ehAdmin, aoFechar, aoSalv
               })}
             </div>
             {erros.regime && <p className="mt-1 text-xs text-red-600">{erros.regime}</p>}
+
+            {/* Campo de descrição quando OUTRO é selecionado */}
+            {form.regime === "OUTRO" && (
+              <div className="mt-3">
+                <label htmlFor="f-regime-outro" className="mb-1 block text-xs font-semibold text-amber-700">
+                  Especifique o que será feito <span className="text-cr-700">*</span>
+                </label>
+                <input
+                  id="f-regime-outro"
+                  type="text"
+                  maxLength={MAX_REGIME_OUTRO}
+                  value={form.regimeOutro ?? ""}
+                  onChange={(e) => {
+                    mudar("regimeOutro", e.target.value);
+                  }}
+                  placeholder="Descreva o que será feito (máx. 50 caracteres)"
+                  className={`w-full rounded-lg border bg-white/70 px-3 py-2 text-sm outline-none focus:ring-2 ${
+                    erros.regimeOutro ? clsErro : clsOk
+                  }`}
+                />
+                <div className="mt-1 flex items-center justify-between">
+                  {erros.regimeOutro ? (
+                    <p className="text-xs text-red-600">{erros.regimeOutro}</p>
+                  ) : (
+                    <span />
+                  )}
+                  <span
+                    className={`text-[11px] font-semibold tabular-nums ${
+                      (form.regimeOutro ?? "").length >= MAX_REGIME_OUTRO
+                        ? "text-cr-700"
+                        : "text-ink-mute"
+                    }`}
+                  >
+                    {(form.regimeOutro ?? "").length}/{MAX_REGIME_OUTRO}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Situação da saída: realizada ou não, com justificativa — exclusivo do administrador */}

@@ -1,9 +1,11 @@
-export const TIPOS = ["SA", "FE", "CR"] as const;
+export const TIPOS = ["RSA", "FE", "CR", "OUTRO"] as const;
 export type Tipo = (typeof TIPOS)[number];
 
 export function ehTipo(v: string): v is Tipo {
   return (TIPOS as readonly string[]).includes(v);
 }
+
+export const MAX_REGIME_OUTRO = 50;
 
 /** Locais de destino mais comuns (sugestões no formulário). */
 export const LOCAIS_BASE = [
@@ -54,6 +56,7 @@ export interface DadosSaida {
   nome: string;
   motivo: string;
   regime: string;
+  regimeOutro?: string;
   veiculo?: string;
   motorista?: string;
   horarioPrevisto?: string;
@@ -133,6 +136,18 @@ export function validarSaida(
     erros.justificativa = "Informe a justificativa da saída não realizada.";
   }
 
+  let regimeOutro = String(input?.regimeOutro ?? "").trim();
+  if (regime !== "OUTRO") {
+    regimeOutro = "";
+  }
+  if (regime === "OUTRO") {
+    if (!regimeOutro) {
+      erros.regimeOutro = "Informe o que será feito no regime OUTRO.";
+    } else if (regimeOutro.length > MAX_REGIME_OUTRO) {
+      erros.regimeOutro = `A descrição do regime OUTRO deve ter no máximo ${MAX_REGIME_OUTRO} caracteres.`;
+    }
+  }
+
   const hoje = hojeISO();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) {
     erros.data = "Informe uma data válida (AA/MM/AAAA).";
@@ -154,10 +169,10 @@ export function validarSaida(
   if (!local) erros.local = "Informe o local de destino.";
   if (!matricula) erros.matricula = "Informe a matrícula.";
   if (!nome) erros.nome = "Informe o nome completo.";
-  if (!ehTipo(regime)) erros.regime = "Selecione o regime SA, FE ou CR.";
+  if (!ehTipo(regime)) erros.regime = "Selecione o regime RSA, FE, CR ou OUTRO.";
 
   return {
     erros: Object.keys(erros).length > 0 ? erros : null,
-    dados: { data, hora, local, matricula, nome, motivo, regime, veiculo, motorista, horarioPrevisto, naoRealizada, justificativa },
+    dados: { data, hora, local, matricula, nome, motivo, regime, regimeOutro, veiculo, motorista, horarioPrevisto, naoRealizada, justificativa },
   };
 }

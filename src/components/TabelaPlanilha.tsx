@@ -290,20 +290,22 @@ function montarLayout(linhas: LinhaPlanilhaVisual[]): LinhaLayout[] {
 export interface LinhaResumoDia {
   data: string; // DD/MM/AAAA
   total: number;
-  sa: number;
+  rsa: number;
   fe: number;
   cr: number;
+  outro: number;
 }
 
 function QuadroResumoDia({ resumo }: { resumo: LinhaResumoDia[] }) {
   const soma = resumo.reduce(
     (acc, d) => ({
       total: acc.total + d.total,
-      sa: acc.sa + d.sa,
+      rsa: acc.rsa + d.rsa,
       fe: acc.fe + d.fe,
       cr: acc.cr + d.cr,
+      outro: acc.outro + d.outro,
     }),
-    { total: 0, sa: 0, fe: 0, cr: 0 }
+    { total: 0, rsa: 0, fe: 0, cr: 0, outro: 0 }
   );
   const THQ =
     "border border-ink bg-hl-300 px-2 py-1 text-center text-[9px] font-extrabold uppercase tracking-wider text-ink sm:text-[10px]";
@@ -320,9 +322,10 @@ function QuadroResumoDia({ resumo }: { resumo: LinhaResumoDia[] }) {
             <tr>
               <th className={THQ}>Data</th>
               <th className={THQ}>PPL</th>
-              <th className={THQ}>SA</th>
+              <th className={THQ}>RSA</th>
               <th className={THQ}>FE</th>
               <th className={THQ}>CR</th>
+              <th className={THQ}>OUTRO</th>
             </tr>
           </thead>
           <tbody>
@@ -330,17 +333,19 @@ function QuadroResumoDia({ resumo }: { resumo: LinhaResumoDia[] }) {
               <tr key={d.data} className="linha-planilha">
                 <td className={`${TDQ} font-semibold`}>{d.data}</td>
                 <td className={TDQ}>{d.total}</td>
-                <td className={TDQ}>{d.sa}</td>
+                <td className={TDQ}>{d.rsa}</td>
                 <td className={TDQ}>{d.fe}</td>
                 <td className={TDQ}>{d.cr}</td>
+                <td className={TDQ}>{d.outro}</td>
               </tr>
             ))}
             <tr className="linha-planilha bg-hl-100 font-extrabold">
               <td className={`${TDQ} text-right uppercase tracking-wider`}>Total</td>
               <td className={TDQ}>{soma.total}</td>
-              <td className={TDQ}>{soma.sa}</td>
+              <td className={TDQ}>{soma.rsa}</td>
               <td className={TDQ}>{soma.fe}</td>
               <td className={TDQ}>{soma.cr}</td>
+              <td className={TDQ}>{soma.outro}</td>
             </tr>
           </tbody>
         </table>
@@ -363,7 +368,7 @@ interface PropsTabelaPlanilha {
   /** Rótulo da faixa de fechamento. */
   rotuloTotais?: string;
   /** Totais por regime em PPL; se omitido, somam-se as linhas agrupadas. */
-  totais?: { SA: number; FE: number; CR: number };
+  totais?: { RSA: number; FE: number; CR: number; OUTRO: number };
   /** Quadro auxiliar abaixo da planilha (usado no consolidado). */
   resumoPorDia?: LinhaResumoDia[];
   carregando?: boolean;
@@ -392,12 +397,12 @@ export default function TabelaPlanilha({
     totais ??
     linhas.reduce(
       (acc, l) => {
-        if (l.regime === "SA" || l.regime === "FE" || l.regime === "CR") {
+        if (l.regime === "RSA" || l.regime === "FE" || l.regime === "CR" || l.regime === "OUTRO") {
           acc[l.regime] += l.quant;
         }
         return acc;
       },
-      { SA: 0, FE: 0, CR: 0 }
+      { RSA: 0, FE: 0, CR: 0, OUTRO: 0 }
     );
 
   // As linhas em branco de sobra contam sobre as linhas já agrupadas.
@@ -585,7 +590,7 @@ export default function TabelaPlanilha({
                     {totalPpl}
                   </td>
                   <td className="border border-ink px-1.5 py-1.5 text-center text-[9.5px] uppercase tracking-wide sm:text-[10px]">
-                    SA: {contagem.SA} · FE: {contagem.FE} · CR: {contagem.CR}
+                    RSA: {contagem.RSA} · FE: {contagem.FE} · CR: {contagem.CR} · OUTRO: {contagem.OUTRO}
                   </td>
                 </tr>
               )}
