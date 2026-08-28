@@ -25,6 +25,9 @@ import Brasao from "./Brasao";
  *    coluna QUANT. PPL traz o número de registros do bloco. A comparação é
  *    feita com os textos normalizados (trim, espaços colapsados, maiúsculas
  *    — ver `normalizar`). Ordem: data → hora → local → tipo de apresentação.
+ *    Exceção: blocos formados apenas por registros de automação (nome
+ *    "AUTOMAÇÃO") não são PPL — a coluna QUANT. PPL exibe "—" (o mesmo vale
+ *    para o CSV).
  *
  * 3. Mesclagem hierárquica com `rowSpan` (a célula só é escrita na primeira
  *    linha do bloco): DATA = todas as linhas do mesmo dia; HORÁRIO = dia +
@@ -58,6 +61,13 @@ const SEP = "\u0001";
 function normalizar(valor: string | null | undefined): string {
   return (valor ?? "").trim().replace(/\s+/g, " ").toUpperCase();
 }
+
+/**
+ * Registros de automação (nome "AUTOMAÇÃO") não são pessoas: não faz sentido
+ * contá-los como PPL. Nesses blocos a coluna QUANT. PPL exibe "—".
+ */
+const eAutomacao = (s: Pick<Saida, "nome">): boolean =>
+  normalizar(s.nome) === "AUTOMAÇÃO";
 
 /** Situação da saída: realizada ou não realizada + justificativa. */
 function situacaoDe(s: Pick<Saida, "naoRealizada" | "justificativa">): string {
@@ -105,6 +115,8 @@ export interface LinhaPlanilhaVisual {
   local: string;
   /** número de PPL no bloco (cada registro de saída = 1 PPL) */
   quant: number;
+  /** bloco formado só por registros de automação (nome "AUTOMAÇÃO") */
+  automacao: boolean;
   tipo: string; // tipo de apresentação (motivo / procedimento)
   regime: string; // SA | FE | CR
   veiculo: string;
@@ -130,6 +142,8 @@ export function montarLinhasPlanilha(itens: Saida[]): LinhaPlanilhaVisual[] {
     const anterior = linhas[linhas.length - 1];
     if (anterior && chaveAnterior === chave) {
       anterior.quant += 1; // mesma PPL de bloco: só aumenta a quantidade
+      // Só mantém o traço se TODO o bloco for de automação (não são PPL).
+      anterior.automacao = anterior.automacao && eAutomacao(s);
       continue;
     }
     chaveAnterior = chave;
@@ -140,6 +154,7 @@ export function montarLinhasPlanilha(itens: Saida[]): LinhaPlanilhaVisual[] {
       horarioPrevisto: s.horarioPrevisto ?? "",
       local: s.local,
       quant: 1,
+      automacao: eAutomacao(s),
       tipo: s.motivo.trim() ? s.motivo.trim() : "—",
       regime: s.regime,
       veiculo: s.veiculo ?? "",
@@ -187,7 +202,8 @@ export function montarCsvPlanilha(itens: Saida[]): string[][] {
     formatarDataBR(s.data),
     s.horarioPrevisto || s.hora,
     s.local,
-    String(quantidadePorBloco.get(chaveGrupo(s)) ?? 1),
+    // Registros de automação não são PPL: exibem o traço no lugar da contagem.
+    eAutomacao(s) ? "—" : String(quantidadePorBloco.get(chaveGrupo(s)) ?? 1),
     s.matricula,
     s.nome,
     s.motivo.trim() ? s.motivo.trim() : "—",
@@ -526,7 +542,7 @@ export default function TabelaPlanilha({
                         <td
                           className={`${TD_CENTRO} font-display text-xs font-extrabold`}
                         >
-                          {l.quant}
+                          {l.automacao ? "—" : l.quant}
                         </td>
                         <td className={TD}>
                           {l.naoRealizada ? (
