@@ -188,7 +188,7 @@ export async function parseArquivoPlanilha(file: File): Promise<ResultadoParse> 
     if (!local) erros.push("local vazio");
     if (!matricula) erros.push("matrícula vazia");
     if (!nome) erros.push("nome vazio");
-    if (!ehTipo(regime)) erros.push(`regime "${regime || "?"}" não é SA/FE/CR`);
+    if (!ehTipo(regime)) erros.push(`regime "${regime || "?"}" não é RSA/FE/CR/OUTRO`);
 
     linhas.push({
       linha: i + 1,
