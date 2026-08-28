@@ -29,7 +29,8 @@ import Brasao from "./Brasao";
  *    (local "TRANSPORTE DE ALIMENTAÇÃO" / "RETIRADA DO LIXO") não são PPL —
  *    as colunas QUANT. PPL, TIPO DE APRESENTAÇÃO e REGIME exibem "—" (o
  *    mesmo vale para o CSV); o horário previsto continua como nos horários
- *    rotineiros.
+ *    rotineiros. O reconhecimento desses nomes/locais ignora acentos (ver
+ *    `semAcentos`), para tolerar cadastros gravados sem acento.
  *
  * 3. Mesclagem hierárquica com `rowSpan` (a célula só é escrita na primeira
  *    linha do bloco): DATA = todas as linhas do mesmo dia; HORÁRIO = dia +
@@ -64,9 +65,14 @@ function normalizar(valor: string | null | undefined): string {
   return (valor ?? "").trim().replace(/\s+/g, " ").toUpperCase();
 }
 
-/** Locais de serviço rotineiro: não são apresentação de PPL. */
+/** Remove acentos/diacríticos para comparação (ex.: "ALIMENTAÇÃO" ≡ "ALIMENTACAO"). */
+function semAcentos(valor: string): string {
+  return valor.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+/** Locais de serviço rotineiro (guardados sem acento, para comparação): não são apresentação de PPL. */
 const LOCAIS_ROTINEIROS = new Set([
-  "TRANSPORTE DE ALIMENTAÇÃO",
+  "TRANSPORTE DE ALIMENTACAO",
   "RETIRADA DO LIXO",
 ]);
 
@@ -76,10 +82,12 @@ const LOCAIS_ROTINEIROS = new Set([
  * apresentação — não faz sentido contá-los como PPL nem descrevê-los como tal.
  * Nesses blocos as colunas QUANT. PPL, TIPO DE APRESENTAÇÃO e REGIME exibem
  * "—"; o horário previsto segue o comportamento dos horários rotineiros.
+ * A comparação ignora acentos: cadastros gravados sem acento (ex.:
+ * "TRANSPORTE DE ALIMENTACAO" / "AUTOMACAO") são reconhecidos do mesmo jeito.
  */
 const eSemPpl = (s: Pick<Saida, "nome" | "local">): boolean =>
-  normalizar(s.nome) === "AUTOMAÇÃO" ||
-  LOCAIS_ROTINEIROS.has(normalizar(s.local));
+  semAcentos(normalizar(s.nome)) === "AUTOMACAO" ||
+  LOCAIS_ROTINEIROS.has(semAcentos(normalizar(s.local)));
 
 /** Situação da saída: realizada ou não realizada + justificativa. */
 function situacaoDe(s: Pick<Saida, "naoRealizada" | "justificativa">): string {
