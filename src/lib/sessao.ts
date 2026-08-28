@@ -10,7 +10,7 @@ import { sessoes } from "@/db/schema";
  * Sessões simplificadas:
  * - O usuário NÃO cria conta.
  * - Operadores: apenas informam Nome + RS (matrícula) na tela inicial, sem senha.
- * - Administradores (admin1 / admin2): entram com usuário + senha.
+ * - Administradores (zanoni / osvaldo): entram com usuário + senha.
  * - Geramos um token de sessão de 7 dias vinculado a esse par.
  * - Cada saída cadastrada fica com o nome+RS de quem cadastrou.
  *
@@ -25,19 +25,26 @@ export const COOKIE_SESSAO = "controle_saidas_sessao";
 const DIAS_SESSAO = 7;
 
 /**
- * Os 2 administradores do sistema.
+ * Os administradores do sistema.
  * - LOGIN: usuário (nome) + senha.
  * - A "senha" fica gravada no campo RS da sessão do administrador,
  *   mantendo o mesmo mecanismo de identificação das saídas.
+ *
+ * Para adicionar/remover um administrador, altere também a lista
+ * `NOMES_ADMINISTRADORES` em `src/lib/admins.ts` (usada pela tela de login).
+ *
+ * As senhas podem ser sobrescritas por variáveis de ambiente (recomendado em
+ * produção — Vercel → Settings → Environment Variables), sem precisar mexer
+ * no código: SENHA_ADMIN_ZANONI e SENHA_ADMIN_OSVALDO.
  */
 export const ADMIN_INICIAL_1 = {
-  nome: "admin1",
-  senha: "2026",
+  nome: "zanoni",
+  senha: process.env.SENHA_ADMIN_ZANONI?.trim() || "Infr@2026",
 };
 
 export const ADMIN_INICIAL_2 = {
-  nome: "admin2",
-  senha: "2026",
+  nome: "osvaldo",
+  senha: process.env.SENHA_ADMIN_OSVALDO?.trim() || "Infr@2026",
 };
 
 export const ADMINISTRADORES = [ADMIN_INICIAL_1, ADMIN_INICIAL_2];

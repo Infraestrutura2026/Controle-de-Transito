@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * POST /api/auth/entrar
  * Body: { nome, rs }
  *
- * - Administradores: nome = admin1/admin2 e o campo "rs" traz a senha.
+ * - Administradores: nome = zanoni/osvaldo e o campo "rs" traz a senha.
  *   Com as credenciais corretas, abre a sessão de administrador (acesso total).
  * - Operadores: qualquer nome + matrícula/RS (sem senha).
  *

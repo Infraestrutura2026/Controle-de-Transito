@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { IconeAlerta, IconeCheck } from "./Icons";
+import { ehNomeDeAdministrador } from "@/lib/admins";
+
 
 export default function LoginForm() {
   const router = useRouter();
@@ -12,7 +14,7 @@ export default function LoginForm() {
   const [entrando, setEntrando] = useState(false);
 
   // Se o nome for de administrador, o segundo campo passa a ser a senha.
-  const nomeEhAdmin = /^(admin1|admin2)$/i.test(nome.trim());
+  const nomeEhAdmin = ehNomeDeAdministrador(nome);
 
   async function entrar(e: React.FormEvent) {
     e.preventDefault();

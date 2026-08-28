@@ -44,10 +44,17 @@ Sistema de registro e controle de saídas para o **Complexo Penal de Marília** 
 Acesse a URL fornecida pela Vercel (algo como `controle-saidas.vercel.app`). Você verá a tela de login.
 
 - **Operadores**: informam **Nome + RS (matrícula)** → tem acesso apenas às saídas que eles mesmos cadastraram.
-- **Administradores**: entram com usuário `admin1` ou `admin2` e senha **`2026`** (definidas em `src/lib/sessao.ts`). Veem todas as saídas e podem gerenciar veículo/motorista.
+- **Administradores**: entram com usuário `zanoni` ou `osvaldo` e a senha definida em `src/lib/sessao.ts` (padrão atual: `Infr@2026`). Veem todas as saídas e podem gerenciar veículo/motorista.
 
 ### 5. Alterar a senha dos administradores (recomendado!)
-Edite o arquivo [`src/lib/sessao.ts`](./src/lib/sessao.ts) e altere os valores de `ADMIN_INICIAL_1` e `ADMIN_INICIAL_2`. Faça commit e push — a Vercel redeploya automaticamente.
+Duas formas:
+
+- **Sem mexer no código (recomendado):** na Vercel, em **Settings → Environment Variables**, crie `SENHA_ADMIN_ZANONI` e/ou `SENHA_ADMIN_OSVALDO` com as senhas desejadas e faça um redeploy. Elas têm prioridade sobre a senha escrita no código.
+- **No código:** edite [`src/lib/sessao.ts`](./src/lib/sessao.ts) e altere os valores de `ADMIN_INICIAL_1` e `ADMIN_INICIAL_2`. Faça commit e push — a Vercel redeploya automaticamente.
+
+**Para adicionar ou remover um administrador**, altere as duas listas:
+1. `ADMINISTRADORES` em [`src/lib/sessao.ts`](./src/lib/sessao.ts) (nome + senha, usado no servidor);
+2. `NOMES_ADMINISTRADORES` em [`src/lib/admins.ts`](./src/lib/admins.ts) (só os nomes, usado na tela de login para trocar o campo "Matrícula / RS" por "Senha").
 
 ### 6. Alterar nome da unidade (se necessário)
 Edite [`src/lib/unidade.ts`](./src/lib/unidade.ts) e ajuste `NOME_UNIDADE` e `SETOR_RESPONSAVEL`.
@@ -126,13 +133,15 @@ public/
 |---|---|---|
 | `DATABASE_URL` | **(obrigatória)** String de conexão Postgres | `postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require` |
 | `DATABASE_SSL` | Força SSL (`true`/`false`). Se não informado, detecta automaticamente (Neon, Supabase, etc.) | `true` |
+| `SENHA_ADMIN_ZANONI` | (opcional) Sobrescreve a senha do administrador `zanoni` | `Infr@2026` |
+| `SENHA_ADMIN_OSVALDO` | (opcional) Sobrescreve a senha do administrador `osvaldo` | `Infr@2026` |
 
 ---
 
 ## 📝 Notas importantes
 
 - **Login de operadores**: sem senha — apenas nome + RS. Cada operador só vê/exclui as saídas cadastradas por ele mesmo (identificadas pelo par `nome + rs` da sessão).
-- **Administradores**: 2 contas hardcoded (`admin1`/`admin2`) — altere as senhas antes do uso em produção.
+- **Administradores**: 2 contas definidas no código (`zanoni`/`osvaldo`) — a senha pode ser sobrescrita pelas env vars `SENHA_ADMIN_ZANONI` / `SENHA_ADMIN_OSVALDO`.
 - **Sessões**: duram 7 dias. Token aleatório de 32 bytes, armazenado como hash SHA-256 no banco.
 - **Brasão**: `/public/brasao.png` é o brasão da Polícia Penal/SP usado como marca d'água e ícone.
 - **SSL Neon**: detectado automaticamente; não precisa configurar certificados.
@@ -146,4 +155,4 @@ public/
 | "`DATABASE_URL is required`" na Vercel | Adicione a env var `DATABASE_URL` no painel da Vercel (Settings → Environment Variables). |
 | "`connect ECONNREFUSED`" ou "`no pg_hba.conf entry`" | Falta SSL. Adicione `DATABASE_SSL=true` ou certifique-se de usar a URL *com* `sslmode=require` do Neon. |
 | Build demora ou falha em fontes | O `next/font/google` baixa fontes no build; em ambientes sem internet o build falha. Na Vercel isso funciona normalmente. |
-| Login admin não funciona | Verifique `src/lib/sessao.ts` — o login padrão é `admin1`/`2026` e `admin2`/`2026`. |
+| Login admin não funciona | Verifique `src/lib/sessao.ts` — os logins são `zanoni` e `osvaldo`, senha `Infr@2026` (ou o valor das env vars `SENHA_ADMIN_*`). |
