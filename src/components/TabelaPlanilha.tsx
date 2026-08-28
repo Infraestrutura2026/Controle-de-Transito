@@ -69,6 +69,7 @@ function chaveGrupo(s: Saida): string {
   return [
     s.data, // YYYY-MM-DD
     s.hora, // HH:mm
+    normalizar(s.horarioPrevisto),
     normalizar(s.local),
     normalizar(s.motivo),
     normalizar(s.regime),
@@ -78,11 +79,12 @@ function chaveGrupo(s: Saida): string {
   ].join(SEP);
 }
 
-/** Ordem exigida pela planilha: data → hora → local → tipo (motivo). */
+/** Ordem exigida pela planilha: data → hora → horário previsto → local → tipo (motivo). */
 function compararSaidas(a: Saida, b: Saida): number {
   return (
     a.data.localeCompare(b.data) ||
     a.hora.localeCompare(b.hora) ||
+    normalizar(a.horarioPrevisto).localeCompare(normalizar(b.horarioPrevisto)) ||
     normalizar(a.local).localeCompare(normalizar(b.local)) ||
     normalizar(a.motivo).localeCompare(normalizar(b.motivo)) ||
     normalizar(a.regime).localeCompare(normalizar(b.regime)) ||
@@ -98,6 +100,8 @@ export interface LinhaPlanilhaVisual {
   chave: string;
   data: string; // DD/MM/AAAA
   hora: string; // HH:MM
+  /** horário previsto informado pelo admin; cai em `hora` se vazio */
+  horarioPrevisto: string;
   local: string;
   /** número de PPL no bloco (cada registro de saída = 1 PPL) */
   quant: number;
@@ -133,6 +137,7 @@ export function montarLinhasPlanilha(itens: Saida[]): LinhaPlanilhaVisual[] {
       chave: `${chave}${SEP}${linhas.length}`,
       data: formatarDataBR(s.data),
       hora: s.hora,
+      horarioPrevisto: s.horarioPrevisto ?? "",
       local: s.local,
       quant: 1,
       tipo: s.motivo.trim() ? s.motivo.trim() : "—",
@@ -180,7 +185,7 @@ export function montarCsvPlanilha(itens: Saida[]): string[][] {
 
   return ordenadas.map((s) => [
     formatarDataBR(s.data),
-    s.hora,
+    s.horarioPrevisto || s.hora,
     s.local,
     String(quantidadePorBloco.get(chaveGrupo(s)) ?? 1),
     s.matricula,
@@ -256,7 +261,7 @@ const rowSpanDe = (c: Celula): number | undefined => (c.rowSpan > 1 ? c.rowSpan 
 function montarLayout(linhas: LinhaPlanilhaVisual[]): LinhaLayout[] {
   const n = linhas.length;
   const chaveDia = (i: number) => linhas[i].data;
-  const chaveHora = (i: number) => `${linhas[i].data}${SEP}${linhas[i].hora}`;
+  const chaveHora = (i: number) => `${linhas[i].data}${SEP}${linhas[i].hora}${SEP}${linhas[i].horarioPrevisto}`;
   const chaveLocal = (i: number) =>
     `${chaveHora(i)}${SEP}${normalizar(linhas[i].local)}`;
   const chaveVeiculo = (i: number) => `${chaveHora(i)}${SEP}${normalizar(linhas[i].veiculo)}`;
@@ -502,7 +507,7 @@ export default function TabelaPlanilha({
                             rowSpan={rowSpanDe(celulas.hora)}
                             className={`${TD_MESCLADA} text-center font-display tabular-nums`}
                           >
-                            {l.hora}
+                            {l.horarioPrevisto || l.hora}
                           </td>
                         ) : null}
                         {celulas.local.inicia ? (

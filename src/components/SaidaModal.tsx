@@ -41,6 +41,7 @@ function estadoInicial(editando: Saida | null): DadosSaida {
       regime: editando.regime,
       veiculo: editando.veiculo ?? "",
       motorista: editando.motorista ?? "",
+      horarioPrevisto: editando.horarioPrevisto ?? "",
       naoRealizada: editando.naoRealizada ?? false,
       justificativa: editando.justificativa ?? "",
     };
@@ -55,6 +56,7 @@ function estadoInicial(editando: Saida | null): DadosSaida {
     regime: "FE",
     veiculo: "",
     motorista: "",
+    horarioPrevisto: "",
     naoRealizada: false,
     justificativa: "",
   };
@@ -304,6 +306,24 @@ export default function SaidaModal({ editando, locais, ehAdmin, aoFechar, aoSalv
                     className={`w-full rounded-lg border bg-white/80 px-3 py-2 text-sm outline-none focus:ring-2 ${clsOk}`}
                   />
                 </div>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="f-horario-previsto" className="mb-1 block text-xs font-semibold text-ink-soft">
+                    Horário previsto para saída
+                  </label>
+                  <input
+                    id="f-horario-previsto"
+                    type="time"
+                    value={form.horarioPrevisto ?? ""}
+                    onChange={(e) => mudar("horarioPrevisto", e.target.value)}
+                    className={`w-full rounded-lg border bg-white/80 px-3 py-2 font-display tabular-nums text-sm outline-none focus:ring-2 ${clsOk}`}
+                  />
+                  <p className="mt-1 text-[11px] text-ink-mute">
+                    Se vazio, usa a hora do cadastro nos relatórios.
+                  </p>
+                </div>
+                <div />
               </div>
             </div>
           )}
