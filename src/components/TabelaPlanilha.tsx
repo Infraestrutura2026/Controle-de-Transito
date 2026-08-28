@@ -199,10 +199,10 @@ const COLUNAS = 8;
 const TH =
   "border border-ink bg-hl-300 px-1.5 py-1.5 text-center text-[9px] font-extrabold uppercase leading-tight tracking-wider text-ink sm:text-[10px]";
 const TD =
-  "break-words border border-ink px-1.5 py-1 align-top text-[10.5px] leading-snug sm:text-xs";
-const TD_CENTRO = `${TD} text-center tabular-nums`;
+  "break-words border border-ink px-1.5 py-1 align-middle text-center text-[10.5px] leading-snug sm:text-xs";
+const TD_CENTRO = `${TD} tabular-nums`;
 /** Célula mesclada (rowSpan): centrada no bloco que ela representa. */
-const TD_MESCLADA = `${TD} align-middle font-semibold`;
+const TD_MESCLADA = `${TD} font-semibold`;
 
 /* ---------------- mesclagem hierárquica (rowSpan) ---------------- */
 

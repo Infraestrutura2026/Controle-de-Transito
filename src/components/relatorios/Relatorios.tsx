@@ -814,7 +814,7 @@ export default function Relatorios({ usuarioNome }: { usuarioNome: string }) {
   const [tipo, setTipo] = useState<TipoRelatorio>("diario");
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+    <div className="grid gap-4 lg:grid-cols-[280px_1fr] print:block print:gap-0">
       {/* Lista de relatórios */}
       <aside className="h-fit rounded-xl border border-line bg-surface p-2 shadow-sm print:hidden">
         <p className="px-3 pb-1 pt-2 text-[11px] font-bold uppercase tracking-wider text-ink-mute">

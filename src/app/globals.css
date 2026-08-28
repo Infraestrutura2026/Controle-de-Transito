@@ -88,6 +88,8 @@
     background: #fff;
   }
   .area-planilha {
+    margin-left: auto;
+    margin-right: auto;
     border-radius: 0 !important;
     box-shadow: none !important;
   }
