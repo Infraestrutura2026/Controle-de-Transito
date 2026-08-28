@@ -5,13 +5,22 @@ import type { Saida } from "@/db/schema";
 import { dataBRParaISO, formatarDataBR, hojeBR } from "@/lib/format";
 import { IconeDownload, IconeImpressora } from "./Icons";
 import CampoDataBR from "./CampoDataBR";
-import TabelaPlanilha, { montarLinhasPlanilha } from "./TabelaPlanilha";
+import TabelaPlanilha, {
+  CABECALHO_CSV_PLANILHA,
+  montarCsvPlanilha,
+  montarLinhasPlanilha,
+} from "./TabelaPlanilha";
 import { Cartao, baixarCSV } from "./relatorios/comum";
 
 /**
  * Relatório Diário de Saídas — documento no formato da planilha física
  * (componente TabelaPlanilha). Os controles e o resumo de apoio aparecem
  * apenas na tela; a impressão/exportação reproduz a folha do setor.
+ *
+ * Na folha as saídas iguais do dia (mesmo horário, local, tipo, regime,
+ * viatura, motorista e situação) aparecem agrupadas em um bloco com
+ * "Quant. PPL"; no CSV cada PPL continua sendo uma linha, com matrícula e
+ * nome. As regras completas estão documentadas em TabelaPlanilha.tsx.
  */
 export default function RelatorioDiario({ usuarioNome }: { usuarioNome: string }) {
   const [dataSel, setDataSel] = useState(() => hojeBR());
@@ -70,23 +79,13 @@ export default function RelatorioDiario({ usuarioNome }: { usuarioNome: string }
     return Object.entries(m).sort((a, b) => b[1] - a[1]);
   }, [itens]);
 
+  /** CSV: uma linha por PPL (matrícula e nome inclusos). */
   function exportarCSV() {
-    if (linhas.length === 0) return;
+    if (itens.length === 0) return;
     baixarCSV(
       `planilha-diaria-${dataBRParaISO(dataSel)}.csv`,
-      ["Nº", "Data", "Hora", "Local", "Matrícula", "Nome", "Motivo", "Regime", "Viatura", "Motorista"],
-      linhas.map((l) => [
-        String(l.numero),
-        l.data,
-        l.hora,
-        l.local,
-        l.matricula,
-        l.nome,
-        l.motivo,
-        l.regime,
-        l.veiculo,
-        l.motorista,
-      ])
+      CABECALHO_CSV_PLANILHA,
+      montarCsvPlanilha(itens)
     );
   }
 

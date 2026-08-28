@@ -2,7 +2,11 @@
 
 import { useMemo, useState } from "react";
 import RelatorioDiario from "../RelatorioDiario";
-import TabelaPlanilha, { montarLinhasPlanilha } from "../TabelaPlanilha";
+import TabelaPlanilha, {
+  CABECALHO_CSV_PLANILHA,
+  montarCsvPlanilha,
+  montarLinhasPlanilha,
+} from "../TabelaPlanilha";
 import TypeBadge from "../TypeBadge";
 import { TIPOS } from "@/lib/constantes";
 import { dataBRParaISO, formatarDataBR, hojeBR } from "@/lib/format";
@@ -123,8 +127,9 @@ function contarRegimes(itens: { regime: string }[]) {
 ================================================================ */
 /**
  * Consolidado por Período — mesma estrutura do documento de papel
- * (TabelaPlanilha), com todas as saídas do período em sequência,
- * numeração contínua, quadro-resumo por dia e faixa de totais.
+ * (TabelaPlanilha), com as saídas do período agrupadas em blocos iguais
+ * (Quant. PPL), mesclagem por data → horário → local, quadro-resumo por dia
+ * e faixa de totais somando PPL. Regras completas em TabelaPlanilha.tsx.
  */
 function RelatorioPeriodo({ usuarioNome }: PropsRelatorio) {
   const [de, setDe] = useState(primeiroDiaDoMesBR());
@@ -152,22 +157,12 @@ function RelatorioPeriodo({ usuarioNome }: PropsRelatorio) {
     itens.map((i) => `${i.matricula}|${i.nome.trim().toUpperCase()}`)
   ).size;
 
+  /** CSV: uma linha por PPL (matrícula e nome inclusos). */
   function exportar() {
     baixarCSV(
       `consolidado-${dataBRParaISO(de)}-a-${dataBRParaISO(ate)}.csv`,
-      ["Nº", "Data", "Hora", "Local", "Matrícula", "Nome", "Motivo", "Regime", "Viatura", "Motorista"],
-      linhas.map((l) => [
-        String(l.numero),
-        l.data,
-        l.hora,
-        l.local,
-        l.matricula,
-        l.nome,
-        l.motivo,
-        l.regime,
-        l.veiculo,
-        l.motorista,
-      ])
+      CABECALHO_CSV_PLANILHA,
+      montarCsvPlanilha(itens)
     );
   }
 
