@@ -26,11 +26,13 @@ import Brasao from "./Brasao";
  *    feita com os textos normalizados (trim, espaços colapsados, maiúsculas
  *    — ver `normalizar`). Ordem: data → hora → local → tipo de apresentação.
  *    Exceção: blocos de automação (nome "AUTOMAÇÃO") ou de serviço rotineiro
- *    (local "TRANSPORTE DE ALIMENTAÇÃO" / "RETIRADA DO LIXO") não são PPL —
+ *    (transporte de alimentação / retirada do lixo, incluída a viagem combinada
+ *    "TRANSPORTE DE ALIMENTAÇÃO E RETIRADA DO LIXO") não são PPL —
  *    as colunas QUANT. PPL, TIPO DE APRESENTAÇÃO e REGIME exibem "—" (o
  *    mesmo vale para o CSV); o horário previsto continua como nos horários
  *    rotineiros. O reconhecimento desses nomes/locais ignora acentos (ver
- *    `semAcentos`), para tolerar cadastros gravados sem acento.
+ *    `semAcentos`) e, nos locais, usa palavras-chave (ver `eLocalRotineiro`),
+ *    para tolerar cadastros gravados sem acento.
  *
  * 3. Mesclagem hierárquica com `rowSpan` (a célula só é escrita na primeira
  *    linha do bloco): DATA = todas as linhas do mesmo dia; HORÁRIO = dia +
@@ -70,15 +72,23 @@ function semAcentos(valor: string): string {
   return valor.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-/** Locais de serviço rotineiro (guardados sem acento, para comparação): não são apresentação de PPL. */
-const LOCAIS_ROTINEIROS = new Set([
-  "TRANSPORTE DE ALIMENTACAO",
-  "RETIRADA DO LIXO",
-]);
+/** Palavras-chave de locais de serviço rotineiro (comparadas sem acento): não são apresentação de PPL. */
+const CHAVES_LOCAL_ROTINEIRO = ["ALIMENTACAO", "LIXO"];
+
+/**
+ * Local de serviço rotineiro: transporte de alimentação, retirada do lixo ou a
+ * viagem combinada ("TRANSPORTE DE ALIMENTAÇÃO E RETIRADA DO LIXO"),
+ * reconhecidos por palavra-chave. O texto já deve estar normalizado e sem
+ * acentos (ver `semAcentos`), para tolerar cadastros gravados sem acento.
+ */
+function eLocalRotineiro(local: string): boolean {
+  return CHAVES_LOCAL_ROTINEIRO.some((chave) => local.includes(chave));
+}
 
 /**
  * Blocos sem PPL: registros de automação (nome "AUTOMAÇÃO") não são pessoas, e
- * os serviços rotineiros (transporte de alimentação / retirada do lixo) não são
+ * os serviços rotineiros (transporte de alimentação / retirada do lixo, incluída
+ * a viagem combinada "TRANSPORTE DE ALIMENTAÇÃO E RETIRADA DO LIXO") não são
  * apresentação — não faz sentido contá-los como PPL nem descrevê-los como tal.
  * Nesses blocos as colunas QUANT. PPL, TIPO DE APRESENTAÇÃO e REGIME exibem
  * "—"; o horário previsto segue o comportamento dos horários rotineiros.
@@ -87,7 +97,7 @@ const LOCAIS_ROTINEIROS = new Set([
  */
 const eSemPpl = (s: Pick<Saida, "nome" | "local">): boolean =>
   semAcentos(normalizar(s.nome)) === "AUTOMACAO" ||
-  LOCAIS_ROTINEIROS.has(semAcentos(normalizar(s.local)));
+  eLocalRotineiro(semAcentos(normalizar(s.local)));
 
 /** Situação da saída: realizada ou não realizada + justificativa. */
 function situacaoDe(s: Pick<Saida, "naoRealizada" | "justificativa">): string {
@@ -137,8 +147,8 @@ export interface LinhaPlanilhaVisual {
   quant: number;
   /**
    * bloco sem PPL: automação (nome "AUTOMAÇÃO") ou serviço rotineiro
-   * (transporte de alimentação / retirada do lixo) — quant, tipo e regime
-   * exibem "—"
+   * (transporte de alimentação / retirada do lixo, incluída a viagem
+   * combinada) — quant, tipo e regime exibem "—"
    */
   semPpl: boolean;
   tipo: string; // tipo de apresentação (motivo / procedimento)
