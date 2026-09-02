@@ -3,7 +3,6 @@ import { operadorAtual } from "@/lib/sessao";
 import { NOME_UNIDADE, SETOR_RESPONSAVEL } from "@/lib/unidade";
 import Brasao from "@/components/Brasao";
 import LoginForm from "@/components/LoginForm";
-import { IconeEscudo } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +18,6 @@ export default async function LoginPage() {
         {/* Brasão oficial como marca d'água atrás do bloco "Controle de Saídas". */}
         <Brasao className="pointer-events-none absolute left-1/2 top-1/2 w-[70%] max-w-[440px] -translate-x-1/2 -translate-y-1/2 opacity-[0.09] select-none" />
         <div className="relative z-10 mx-auto w-full max-w-xl text-center">
-          <div className="mx-auto mb-10 grid size-14 place-items-center rounded-xl bg-pine-600 ring-1 ring-white/10">
-            <IconeEscudo className="size-7" />
-          </div>
           <h1 className="font-display text-3xl font-semibold uppercase leading-tight tracking-tight sm:text-5xl xl:text-6xl">
             {"Controle de Saídas de PPL's"}
           </h1>
