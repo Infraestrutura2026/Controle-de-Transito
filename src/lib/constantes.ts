@@ -103,7 +103,7 @@ export interface DadosSaida {
   regimeOutro?: string;
   veiculo?: string;
   motorista?: string;
-  horarioPrevisto?: string;
+  horarioEmbarque?: string;
   naoRealizada?: boolean;
   justificativa?: string;
 }
@@ -146,14 +146,14 @@ export function validarSaida(
   const regime = String(input?.regime ?? "").trim().toUpperCase();
   const veiculo = String(input?.veiculo ?? "").trim().toUpperCase();
   const motorista = String(input?.motorista ?? "").trim().toUpperCase();
-  let horarioPrevisto = normalizarHora(String(input?.horarioPrevisto ?? "")).trim();
-  if (horarioPrevisto && !/^\d{2}:\d{2}$/.test(horarioPrevisto)) {
-    horarioPrevisto = "";
+  let horarioEmbarque = normalizarHora(String(input?.horarioEmbarque ?? "")).trim();
+  if (horarioEmbarque && !/^\d{2}:\d{2}$/.test(horarioEmbarque)) {
+    horarioEmbarque = "";
   }
-  if (horarioPrevisto) {
-    const [hh, mm] = horarioPrevisto.split(":").map(Number);
+  if (horarioEmbarque) {
+    const [hh, mm] = horarioEmbarque.split(":").map(Number);
     if (hh < 0 || hh > 23 || mm < 0 || mm > 59) {
-      horarioPrevisto = "";
+      horarioEmbarque = "";
     }
   }
   const naoRealizada = Boolean(input?.naoRealizada);
@@ -203,6 +203,6 @@ export function validarSaida(
 
   return {
     erros: Object.keys(erros).length > 0 ? erros : null,
-    dados: { data, hora, local, matricula, nome, motivo, regime, regimeOutro, veiculo, motorista, horarioPrevisto, naoRealizada, justificativa },
+    dados: { data, hora, local, matricula, nome, motivo, regime, regimeOutro, veiculo, motorista, horarioEmbarque, naoRealizada, justificativa },
   };
 }

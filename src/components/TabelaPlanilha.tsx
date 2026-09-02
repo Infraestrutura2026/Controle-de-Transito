@@ -13,7 +13,7 @@ import Brasao from "./Brasao";
  * Período — qualquer alteração aqui vale para os dois):
  *
  * 1. Oito colunas, nesta ordem, **sem** coluna "Nº":
- *    DATA DA SAÍDA · HORÁRIO PREVISTO PARA SAÍDA · LOCAL DA APRESENTAÇÃO ·
+ *    DATA DA SAÍDA · HORÁRIO DE EMBARQUE · LOCAL DA APRESENTAÇÃO ·
  *    QUANT. PPL · TIPO DE APRESENTAÇÃO · REGIME · VIATURA · MOTORISTA.
  *    A matrícula e o nome do servidor não aparecem na folha (ficam apenas no
  *    CSV exportado). Cabeçalho em amarelo (cor da planilha física), grade com
@@ -29,7 +29,7 @@ import Brasao from "./Brasao";
  *    (transporte de alimentação / retirada do lixo, incluída a viagem combinada
  *    "TRANSPORTE DE ALIMENTAÇÃO E RETIRADA DO LIXO") não são PPL —
  *    as colunas QUANT. PPL, TIPO DE APRESENTAÇÃO e REGIME exibem "—" (o
- *    mesmo vale para o CSV); o horário previsto continua como nos horários
+ *    mesmo vale para o CSV); o horário de embarque continua como nos horários
  *    rotineiros. O reconhecimento desses nomes/locais ignora acentos (ver
  *    `semAcentos`) e, nos locais, usa palavras-chave (ver `eLocalRotineiro`),
  *    para tolerar cadastros gravados sem acento.
@@ -91,7 +91,7 @@ function eLocalRotineiro(local: string): boolean {
  * a viagem combinada "TRANSPORTE DE ALIMENTAÇÃO E RETIRADA DO LIXO") não são
  * apresentação — não faz sentido contá-los como PPL nem descrevê-los como tal.
  * Nesses blocos as colunas QUANT. PPL, TIPO DE APRESENTAÇÃO e REGIME exibem
- * "—"; o horário previsto segue o comportamento dos horários rotineiros.
+ * "—"; o horário de embarque segue o comportamento dos horários rotineiros.
  * A comparação ignora acentos: cadastros gravados sem acento (ex.:
  * "TRANSPORTE DE ALIMENTACAO" / "AUTOMACAO") são reconhecidos do mesmo jeito.
  */
@@ -109,7 +109,7 @@ function chaveGrupo(s: Saida): string {
   return [
     s.data, // YYYY-MM-DD
     s.hora, // HH:mm
-    normalizar(s.horarioPrevisto),
+    normalizar(s.horarioEmbarque),
     normalizar(s.local),
     normalizar(s.motivo),
     normalizar(s.regime),
@@ -119,12 +119,12 @@ function chaveGrupo(s: Saida): string {
   ].join(SEP);
 }
 
-/** Ordem exigida pela planilha: data → hora → horário previsto → local → tipo (motivo). */
+/** Ordem exigida pela planilha: data → hora → horário de embarque → local → tipo (motivo). */
 function compararSaidas(a: Saida, b: Saida): number {
   return (
     a.data.localeCompare(b.data) ||
     a.hora.localeCompare(b.hora) ||
-    normalizar(a.horarioPrevisto).localeCompare(normalizar(b.horarioPrevisto)) ||
+    normalizar(a.horarioEmbarque).localeCompare(normalizar(b.horarioEmbarque)) ||
     normalizar(a.local).localeCompare(normalizar(b.local)) ||
     normalizar(a.motivo).localeCompare(normalizar(b.motivo)) ||
     normalizar(a.regime).localeCompare(normalizar(b.regime)) ||
@@ -140,8 +140,8 @@ export interface LinhaPlanilhaVisual {
   chave: string;
   data: string; // DD/MM/AAAA
   hora: string; // HH:MM
-  /** horário previsto informado pelo admin; cai em `hora` se vazio */
-  horarioPrevisto: string;
+  /** horário de embarque informado pelo admin; cai em `hora` se vazio */
+  horarioEmbarque: string;
   local: string;
   /** número de PPL no bloco (cada registro de saída = 1 PPL) */
   quant: number;
@@ -185,7 +185,7 @@ export function montarLinhasPlanilha(itens: Saida[]): LinhaPlanilhaVisual[] {
       chave: `${chave}${SEP}${linhas.length}`,
       data: formatarDataBR(s.data),
       hora: s.hora,
-      horarioPrevisto: s.horarioPrevisto ?? "",
+      horarioEmbarque: s.horarioEmbarque ?? "",
       local: s.local,
       quant: 1,
       semPpl: eSemPpl(s),
@@ -206,7 +206,7 @@ export function montarLinhasPlanilha(itens: Saida[]): LinhaPlanilhaVisual[] {
 /** Cabeçalho do CSV dos relatórios em formato de planilha. */
 export const CABECALHO_CSV_PLANILHA = [
   "Data da saída",
-  "Horário previsto para saída",
+  "Horário de Embarque",
   "Local da apresentação",
   "Quant. PPL",
   "Matrícula",
@@ -238,7 +238,7 @@ export function montarCsvPlanilha(itens: Saida[]): string[][] {
     const semPpl = eSemPpl(s);
     return [
       formatarDataBR(s.data),
-      s.horarioPrevisto || s.hora,
+      s.horarioEmbarque || s.hora,
       s.local,
       semPpl ? "—" : String(quantidadePorBloco.get(chaveGrupo(s)) ?? 1),
       s.matricula,
@@ -315,7 +315,7 @@ const rowSpanDe = (c: Celula): number | undefined => (c.rowSpan > 1 ? c.rowSpan 
 function montarLayout(linhas: LinhaPlanilhaVisual[]): LinhaLayout[] {
   const n = linhas.length;
   const chaveDia = (i: number) => linhas[i].data;
-  const chaveHora = (i: number) => `${linhas[i].data}${SEP}${linhas[i].hora}${SEP}${linhas[i].horarioPrevisto}`;
+  const chaveHora = (i: number) => `${linhas[i].data}${SEP}${linhas[i].hora}${SEP}${linhas[i].horarioEmbarque}`;
   const chaveLocal = (i: number) =>
     `${chaveHora(i)}${SEP}${normalizar(linhas[i].local)}`;
   const chaveVeiculo = (i: number) => `${chaveHora(i)}${SEP}${normalizar(linhas[i].veiculo)}`;
@@ -505,7 +505,7 @@ export default function TabelaPlanilha({
             <thead>
               <tr>
                 <th className={`${TH} w-20`}>Data da saída</th>
-                <th className={`${TH} w-20`}>Horário previsto para saída</th>
+                <th className={`${TH} w-20`}>Horário de Embarque</th>
                 <th className={TH}>Local da apresentação</th>
                 <th className={`${TH} w-12`}>Quant. PPL</th>
                 <th className={TH}>Tipo de apresentação</th>
@@ -566,7 +566,7 @@ export default function TabelaPlanilha({
                             rowSpan={rowSpanDe(celulas.hora)}
                             className={`${TD_MESCLADA} text-center font-display tabular-nums`}
                           >
-                            {l.horarioPrevisto || l.hora}
+                            {l.horarioEmbarque || l.hora}
                           </td>
                         ) : null}
                         {celulas.local.inicia ? (

@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS saidas (
   regime_outro   TEXT NOT NULL DEFAULT '', -- descrição quando regime = OUTRO (máx. 50)
   veiculo        TEXT NOT NULL DEFAULT '', -- veículo do serviço (admin)
   motorista      TEXT NOT NULL DEFAULT '', -- motorista do serviço (admin)
-  horario_previsto TEXT NOT NULL DEFAULT '', -- horário previsto para saída (admin, HH:mm)
+  horario_embarque TEXT NOT NULL DEFAULT '', -- HORÁRIO DE EMBARQUE (admin, HH:mm)
   nao_realizada  BOOLEAN NOT NULL DEFAULT FALSE,
   justificativa  TEXT NOT NULL DEFAULT '', -- motivo da não realização (máx. 50)
   criado_por_nome TEXT NOT NULL DEFAULT 'Sistema',

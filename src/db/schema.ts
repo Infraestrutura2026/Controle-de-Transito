@@ -46,7 +46,7 @@ export const saidas = pgTable("saidas", {
   regimeOutro: text("regime_outro").notNull().default(""), // descrição quando regime = OUTRO (máx. 50)
   veiculo: text("veiculo").notNull().default(""), // veículo do serviço (admin)
   motorista: text("motorista").notNull().default(""), // motorista do serviço (admin)
-  horarioPrevisto: text("horario_previsto").notNull().default(""), // horário previsto para saída (admin, HH:mm)
+  horarioEmbarque: text("horario_embarque").notNull().default(""), // HORÁRIO DE EMBARQUE (admin, HH:mm)
   naoRealizada: boolean("nao_realizada").notNull().default(false), // saída não foi realizada
   justificativa: text("justificativa").notNull().default(""), // motivo da não realização (máx. 50)
   criadoPorNome: text("criado_por_nome").notNull().default("Sistema"),
