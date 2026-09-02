@@ -18,17 +18,17 @@ export default async function LoginPage() {
         <div className="absolute inset-0 opacity-30 [background:radial-gradient(circle_at_20%_20%,#f3d479_0,transparent_28%),radial-gradient(circle_at_90%_10%,#7cbba9_0,transparent_24%)]" />
         {/* Brasão oficial como marca d'água atrás do bloco "Controle de Saídas". */}
         <Brasao className="pointer-events-none absolute left-1/2 top-1/2 w-[70%] max-w-[440px] -translate-x-1/2 -translate-y-1/2 opacity-[0.09] select-none" />
-        <div className="relative z-10 mx-auto w-full max-w-md">
-          <div className="mb-8 grid size-12 place-items-center rounded-xl bg-pine-600 ring-1 ring-white/10">
-            <IconeEscudo className="size-6" />
+        <div className="relative z-10 mx-auto w-full max-w-xl text-center">
+          <div className="mx-auto mb-10 grid size-14 place-items-center rounded-xl bg-pine-600 ring-1 ring-white/10">
+            <IconeEscudo className="size-7" />
           </div>
-          <p className="text-xs font-bold uppercase tracking-[0.24em] text-hl-300">
+          <h1 className="font-display text-3xl font-semibold uppercase leading-tight tracking-tight sm:text-5xl xl:text-6xl">
+            {"Controle de Saídas de PPL's"}
+          </h1>
+          <p className="mt-6 text-sm font-bold uppercase tracking-[0.24em] text-hl-300 sm:text-base">
             {NOME_UNIDADE}
           </p>
-          <h1 className="mt-3 font-display text-2xl font-semibold tracking-tight sm:text-4xl xl:text-5xl">
-            Controle de Saídas
-          </h1>
-          <p className="mt-2 text-sm font-medium text-paper/60">{SETOR_RESPONSAVEL}</p>
+          <p className="mt-3 text-base font-medium text-paper/60 sm:text-lg">{SETOR_RESPONSAVEL}</p>
         </div>
         {/* faixa de acento na base, nas mesmas cores do sistema */}
         <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-hl-500 via-pine-600 to-hl-300" />
