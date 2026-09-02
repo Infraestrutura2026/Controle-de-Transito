@@ -136,12 +136,12 @@ export async function POST(req: Request) {
     }
     const { erros, dados } = validarSaida(corpo);
     if (erros) return NextResponse.json({ erros }, { status: 400 });
-    // Veículo, motorista, horário previsto e justificativa de não realização são exclusivos do administrador.
+    // Veículo, motorista, horário de embarque e justificativa de não realização são exclusivos do administrador.
     const valores = { ...dados, criadoPorNome: op.nome, criadoPorRs: op.rs };
     if (!ehAdministrador(op)) {
       valores.veiculo = "";
       valores.motorista = "";
-      valores.horarioPrevisto = "";
+      valores.horarioEmbarque = "";
       valores.naoRealizada = false;
       valores.justificativa = "";
     }
