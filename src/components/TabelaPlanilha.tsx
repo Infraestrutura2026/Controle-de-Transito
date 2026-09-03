@@ -32,7 +32,10 @@ import Brasao from "./Brasao";
  *    mesmo vale para o CSV); o horário de embarque continua como nos horários
  *    rotineiros. O reconhecimento desses nomes/locais ignora acentos (ver
  *    `semAcentos`) e, nos locais, usa palavras-chave (ver `eLocalRotineiro`),
- *    para tolerar cadastros gravados sem acento.
+ *    para tolerar cadastros gravados sem acento. Já o motivo
+ *    "TRANSPORTE DE FUNCIONÁRIO" (ver `eTransporteFuncionario`) leva "—"
+ *    apenas na coluna QUANT. PPL: o tipo de apresentação (o próprio motivo)
+ *    e o regime continuam sendo exibidos normalmente.
  *
  * 3. Mesclagem hierárquica com `rowSpan` (a célula só é escrita na primeira
  *    linha do bloco): DATA = todas as linhas do mesmo dia; HORÁRIO = dia +
@@ -55,7 +58,8 @@ import Brasao from "./Brasao";
  *
  * 7. CSV: uma linha por PPL, com matrícula e nome, e o Quant. PPL do bloco a
  *    que a pessoa pertence — ver `montarCsvPlanilha` /
- *    `CABECALHO_CSV_PLANILHA` (usados pelos dois relatórios).
+ *    `CABECALHO_CSV_PLANILHA` (usados pelos dois relatórios). Blocos sem PPL
+ *    ou de motivo "TRANSPORTE DE FUNCIONÁRIO" levam "—" na coluna Quant. PPL.
  */
 
 /* ---------------- agrupamento (1 registro = 1 PPL) ---------------- */
@@ -98,6 +102,23 @@ function eLocalRotineiro(local: string): boolean {
 const eSemPpl = (s: Pick<Saida, "nome" | "local">): boolean =>
   semAcentos(normalizar(s.nome)) === "AUTOMACAO" ||
   eLocalRotineiro(semAcentos(normalizar(s.local)));
+
+/**
+ * Motivo "TRANSPORTE DE FUNCIONÁRIO": não é apresentação de PPL, então a
+ * coluna QUANT. PPL exibe "—" — mas, ao contrário dos blocos sem PPL, o tipo
+ * de apresentação (o próprio motivo) e o regime continuam normais. A
+ * comparação ignora acentos e aceita o texto dentro de outro (ex.:
+ * "TRANSPORTE DE FUNCIONARIOS").
+ */
+export const eTransporteFuncionario = (motivo: string): boolean =>
+  semAcentos(normalizar(motivo)).includes("TRANSPORTE DE FUNCIONARIO");
+
+/**
+ * Bloco com "—" na coluna QUANT. PPL: os sem PPL (automação / serviço
+ * rotineiro, ver `eSemPpl`) e os de motivo "TRANSPORTE DE FUNCIONÁRIO".
+ */
+const eSemQuantPpl = (s: Pick<Saida, "nome" | "local" | "motivo">): boolean =>
+  eSemPpl(s) || eTransporteFuncionario(s.motivo);
 
 /** Situação da saída: realizada ou não realizada + justificativa. */
 function situacaoDe(s: Pick<Saida, "naoRealizada" | "justificativa">): string {
@@ -151,6 +172,11 @@ export interface LinhaPlanilhaVisual {
    * combinada) — quant, tipo e regime exibem "—"
    */
   semPpl: boolean;
+  /**
+   * bloco com "—" apenas na coluna QUANT. PPL: os sem PPL acima e os de
+   * motivo "TRANSPORTE DE FUNCIONÁRIO" (tipo e regime seguem normais)
+   */
+  semQuant: boolean;
   tipo: string; // tipo de apresentação (motivo / procedimento)
   regime: string; // SA | FE | CR
   veiculo: string;
@@ -178,6 +204,8 @@ export function montarLinhasPlanilha(itens: Saida[]): LinhaPlanilhaVisual[] {
       anterior.quant += 1; // mesma PPL de bloco: só aumenta a quantidade
       // Só mantém o traço se TODO o bloco for sem PPL (não são PPL).
       anterior.semPpl = anterior.semPpl && eSemPpl(s);
+      // Idem para o traço da QUANT. PPL (sem PPL ou transporte de funcionário).
+      anterior.semQuant = anterior.semQuant && eSemQuantPpl(s);
       continue;
     }
     chaveAnterior = chave;
@@ -189,6 +217,7 @@ export function montarLinhasPlanilha(itens: Saida[]): LinhaPlanilhaVisual[] {
       local: s.local,
       quant: 1,
       semPpl: eSemPpl(s),
+      semQuant: eSemQuantPpl(s),
       tipo: s.motivo.trim() ? s.motivo.trim() : "—",
       regime: s.regime,
       veiculo: s.veiculo ?? "",
@@ -234,13 +263,15 @@ export function montarCsvPlanilha(itens: Saida[]): string[][] {
 
   return ordenadas.map((s) => {
     // Automação / serviço rotineiro: não são PPL — traço no lugar da
-    // contagem, do tipo de apresentação e do regime.
+    // contagem, do tipo de apresentação e do regime. Transporte de
+    // funcionário: traço apenas na contagem (Quant. PPL).
     const semPpl = eSemPpl(s);
+    const semQuant = eSemQuantPpl(s);
     return [
       formatarDataBR(s.data),
       s.horarioEmbarque || s.hora,
       s.local,
-      semPpl ? "—" : String(quantidadePorBloco.get(chaveGrupo(s)) ?? 1),
+      semQuant ? "—" : String(quantidadePorBloco.get(chaveGrupo(s)) ?? 1),
       s.matricula,
       s.nome,
       semPpl ? "—" : s.motivo.trim() ? s.motivo.trim() : "—",
@@ -580,7 +611,7 @@ export default function TabelaPlanilha({
                         <td
                           className={`${TD_CENTRO} font-display text-xs font-extrabold`}
                         >
-                          {l.semPpl ? "—" : l.quant}
+                          {l.semQuant ? "—" : l.quant}
                         </td>
                         <td className={TD}>
                           {l.semPpl ? (
