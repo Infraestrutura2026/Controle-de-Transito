@@ -334,13 +334,13 @@ export default function SaidaModal({ editando, locais, ehAdmin, aoFechar, aoSalv
           <div className="mt-3">
             <p className="mb-1 text-xs font-semibold text-ink-soft">
               Regime <span className="text-cr-700">*</span>
-              <span className="ml-1 font-normal text-ink-mute">(RSA, FE, CR ou OUTRO — conforme planilha)</span>
+              <span className="ml-1 font-normal text-ink-mute">(SA, FE, CR ou OUTRO — conforme planilha)</span>
             </p>
             <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label="Regime da saída">
               {TIPOS.map((t) => {
                 const ativo = form.regime === t;
                 const borda =
-                  t === "RSA"
+                  t === "SA"
                     ? "border-sa-700 bg-sa-100/60 text-sa-700"
                     : t === "CR"
                       ? "border-cr-700 bg-cr-100/60 text-cr-700"

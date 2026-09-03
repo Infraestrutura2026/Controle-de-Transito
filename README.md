@@ -27,7 +27,7 @@ Sistema de registro e controle de saídas para o **Complexo Penal de Marília** 
 1. No painel do Neon, menu lateral → **SQL Editor**.
 2. Abra o arquivo [`db/setup.sql`](./db/setup.sql) deste repositório, **copie todo o conteúdo**, cole no SQL Editor e clique em **Run**.
 3. Você deve ver as 3 tabelas criadas: `usuarios`, `sessoes`, `saidas`.
-4. **Banco já existente?** Rode também [`db/migracao_horario_embarque.sql`](./db/migracao_horario_embarque.sql) para renomear a coluna `horario_previsto` para `horario_embarque` (**HORÁRIO DE EMBARQUE**). O script é idempotente e preserva os dados já cadastrados.
+4. **Banco já existente?** Rode também [`db/migracao_horario_embarque.sql`](./db/migracao_horario_embarque.sql) para renomear a coluna `horario_previsto` para `horario_embarque` (**HORÁRIO DE EMBARQUE**) e [`db/migracao_regime_sa.sql`](./db/migracao_regime_sa.sql) para converter o regime `RSA` em `SA`. Ambos os scripts são idempotentes e preservam os dados já cadastrados.
 
 ### 3. Fazer deploy na Vercel
 1. Acesse <https://vercel.com/new> (se não tiver conta, cadastre-se — é gratuita para projetos pessoais).

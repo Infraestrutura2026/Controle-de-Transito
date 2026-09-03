@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { saidas } from "@/db/schema";
 import { ehAdministrador, exigirOperador } from "@/lib/sessao";
 import { respostaErroAuth } from "@/lib/apiAuth";
-import { ehTipo } from "@/lib/constantes";
+import { normalizarRegime } from "@/lib/constantes";
 
 export const dynamic = "force-dynamic";
 
@@ -54,14 +54,15 @@ export async function POST(req: Request) {
     const validas: LinhaImportar[] = [];
     let invalidas = 0;
     for (const l of brutas) {
-      const ok =
+      const regime = normalizarRegime(l.regime);
+      if (
+        regime &&
         /^\d{4}-\d{2}-\d{2}$/.test(l.data) &&
         /^\d{2}:\d{2}$/.test(l.hora) &&
         !!l.local?.trim() &&
         !!l.matricula?.trim() &&
-        !!l.nome?.trim() &&
-        ehTipo(l.regime);
-      if (ok) {
+        !!l.nome?.trim()
+      ) {
         validas.push({
           data: l.data,
           hora: l.hora,
@@ -69,7 +70,7 @@ export async function POST(req: Request) {
           matricula: l.matricula.trim(),
           nome: l.nome.trim().toUpperCase(),
           motivo: (l.motivo ?? "").trim().toUpperCase(),
-          regime: l.regime.toUpperCase(),
+          regime,
         });
       } else {
         invalidas++;

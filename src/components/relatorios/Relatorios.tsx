@@ -117,7 +117,7 @@ const OPCOES: {
 ];
 
 function contarRegimes(itens: { regime: string }[]) {
-  const c: Record<string, number> = { RSA: 0, FE: 0, CR: 0, OUTRO: 0 };
+  const c: Record<string, number> = { SA: 0, FE: 0, CR: 0, OUTRO: 0 };
   for (const i of itens) c[i.regime] = (c[i.regime] ?? 0) + 1;
   return c;
 }
@@ -176,7 +176,7 @@ function RelatorioPeriodo({ usuarioNome }: PropsRelatorio) {
       {/* resumo de apoio — só na tela */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 print:hidden">
         <Cartao rotulo="Total de saídas" valor={total} />
-        <Cartao rotulo="Regime RSA" valor={reg.RSA} tom="azul" />
+        <Cartao rotulo="Regime SA" valor={reg.SA} tom="azul" />
         <Cartao rotulo="Regime FE" valor={reg.FE} tom="neutro" />
         <Cartao rotulo="Regime CR" valor={reg.CR} tom="vermelho" />
         <Cartao rotulo="Regime OUTRO" valor={reg.OUTRO} tom="padrao" />
@@ -192,11 +192,11 @@ function RelatorioPeriodo({ usuarioNome }: PropsRelatorio) {
         usuarioNome={usuarioNome}
         minimoLinhas={8}
         rotuloTotais="Total de saídas no período"
-        totais={{ RSA: reg.RSA, FE: reg.FE, CR: reg.CR, OUTRO: reg.OUTRO }}
+        totais={{ SA: reg.SA, FE: reg.FE, CR: reg.CR, OUTRO: reg.OUTRO }}
         resumoPorDia={porDia.map((d) => ({
           data: formatarDataBR(d.data),
           total: d.total,
-          rsa: d.reg.RSA,
+          sa: d.reg.SA,
           fe: d.reg.FE,
           cr: d.reg.CR,
           outro: d.reg.OUTRO,
@@ -231,8 +231,8 @@ function RelatorioLocais({ usuarioNome }: PropsRelatorio) {
   function exportar() {
     baixarCSV(
       `locais-${dataBRParaISO(de)}-a-${dataBRParaISO(ate)}.csv`,
-      ["Local de destino", "Total", "%", "RSA", "FE", "CR", "OUTRO"],
-      linhas.map((l) => [l.local, String(l.total), pct(l.total, total), String(l.reg.RSA), String(l.reg.FE), String(l.reg.CR), String(l.reg.OUTRO)])
+      ["Local de destino", "Total", "%", "SA", "FE", "CR", "OUTRO"],
+      linhas.map((l) => [l.local, String(l.total), pct(l.total, total), String(l.reg.SA), String(l.reg.FE), String(l.reg.CR), String(l.reg.OUTRO)])
     );
   }
 
@@ -254,7 +254,7 @@ function RelatorioLocais({ usuarioNome }: PropsRelatorio) {
               <th className={TH}>Local de destino</th>
               <th className={`${TH} text-center`}>Total</th>
               <th className={`${TH} text-center`}>%</th>
-              <th className={`${TH} text-center`}>RSA</th>
+              <th className={`${TH} text-center`}>SA</th>
               <th className={`${TH} text-center`}>FE</th>
               <th className={`${TH} text-center`}>CR</th>
               <th className={`${TH} text-center`}>OUTRO</th>
@@ -269,7 +269,7 @@ function RelatorioLocais({ usuarioNome }: PropsRelatorio) {
                   <td className={`${TD} font-semibold text-ink`}>{l.local}</td>
                   <td className={`${TD} text-center font-display font-bold tabular-nums`}>{l.total}</td>
                   <td className={`${TD} text-center tabular-nums text-ink-soft`}>{pct(l.total, total)}</td>
-                  <td className={`${TD} text-center tabular-nums text-sa-700`}>{l.reg.RSA}</td>
+                  <td className={`${TD} text-center tabular-nums text-sa-700`}>{l.reg.SA}</td>
                   <td className={`${TD} text-center tabular-nums text-stone-700`}>{l.reg.FE}</td>
                   <td className={`${TD} text-center tabular-nums text-cr-700`}>{l.reg.CR}</td>
                   <td className={`${TD} text-center tabular-nums text-amber-700`}>{l.reg.OUTRO}</td>

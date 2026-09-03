@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { ehTipo } from "./constantes";
+import { normalizarRegime } from "./constantes";
 
 export interface LinhaPlanilha {
   linha: number; // número da linha no arquivo (para referência)
@@ -181,6 +181,7 @@ export async function parseArquivoPlanilha(file: File): Promise<ResultadoParse> 
     const nome = texto(rFmt[mapa.nome]).toUpperCase();
     const motivo = texto(rFmt[mapa.motivo]).toUpperCase();
     const regime = texto(rFmt[mapa.regime]).toUpperCase();
+    const regimeNorm = normalizarRegime(regime);
 
     const erros: string[] = [];
     if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) erros.push("data inválida");
@@ -188,7 +189,7 @@ export async function parseArquivoPlanilha(file: File): Promise<ResultadoParse> 
     if (!local) erros.push("local vazio");
     if (!matricula) erros.push("matrícula vazia");
     if (!nome) erros.push("nome vazio");
-    if (!ehTipo(regime)) erros.push(`regime "${regime || "?"}" não é RSA/FE/CR/OUTRO`);
+    if (!regimeNorm) erros.push(`regime "${regime || "?"}" não é SA/FE/CR/OUTRO`);
 
     linhas.push({
       linha: i + 1,
@@ -198,7 +199,7 @@ export async function parseArquivoPlanilha(file: File): Promise<ResultadoParse> 
       matricula,
       nome,
       motivo,
-      regime: ehTipo(regime) ? regime : "",
+      regime: regimeNorm ?? "",
       ok: erros.length === 0,
       erro: erros.length ? erros.join(", ") : undefined,
     });

@@ -42,7 +42,7 @@ export const saidas = pgTable("saidas", {
   matricula: text("matricula").notNull(), // matrícula do servidor que vai sair
   nome: text("nome").notNull(),
   motivo: text("motivo").notNull().default(""), // procedimento / motivo
-  regime: text("regime").notNull().default("FE"), // RSA | FE | CR | OUTRO
+  regime: text("regime").notNull().default("FE"), // SA | FE | CR | OUTRO
   regimeOutro: text("regime_outro").notNull().default(""), // descrição quando regime = OUTRO (máx. 50)
   veiculo: text("veiculo").notNull().default(""), // veículo do serviço (admin)
   motorista: text("motorista").notNull().default(""), // motorista do serviço (admin)

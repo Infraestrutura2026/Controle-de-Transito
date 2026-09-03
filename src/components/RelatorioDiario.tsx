@@ -68,7 +68,7 @@ export default function RelatorioDiario({ usuarioNome }: { usuarioNome: string }
   const linhas = useMemo(() => montarLinhasPlanilha(itens), [itens]);
 
   const porRegime = useMemo(() => {
-    const c: Record<string, number> = { RSA: 0, FE: 0, CR: 0, OUTRO: 0 };
+    const c: Record<string, number> = { SA: 0, FE: 0, CR: 0, OUTRO: 0 };
     for (const s of itens) c[s.regime] = (c[s.regime] ?? 0) + 1;
     return c;
   }, [itens]);
@@ -145,7 +145,7 @@ export default function RelatorioDiario({ usuarioNome }: { usuarioNome: string }
       {/* Resumo de apoio (só na tela — não vai para a folha impressa) */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 print:hidden">
         <Cartao rotulo="Total de saídas" valor={itens.length} />
-        <Cartao rotulo="Regime RSA" valor={porRegime.RSA} tom="azul" />
+        <Cartao rotulo="Regime SA" valor={porRegime.SA} tom="azul" />
         <Cartao rotulo="Regime FE" valor={porRegime.FE} tom="neutro" />
         <Cartao rotulo="Regime CR" valor={porRegime.CR} tom="vermelho" />
         <Cartao rotulo="Regime OUTRO" valor={porRegime.OUTRO} tom="padrao" />
@@ -192,7 +192,7 @@ export default function RelatorioDiario({ usuarioNome }: { usuarioNome: string }
         atualizadoAs={atualizadoAs}
         minimoLinhas={15}
         rotuloTotais="Total de saídas no dia"
-        totais={{ RSA: porRegime.RSA, FE: porRegime.FE, CR: porRegime.CR, OUTRO: porRegime.OUTRO }}
+        totais={{ SA: porRegime.SA, FE: porRegime.FE, CR: porRegime.CR, OUTRO: porRegime.OUTRO }}
       />
     </div>
   );
