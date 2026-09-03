@@ -1,8 +1,19 @@
-export const TIPOS = ["RSA", "FE", "CR", "OUTRO"] as const;
+export const TIPOS = ["SA", "FE", "CR", "OUTRO"] as const;
 export type Tipo = (typeof TIPOS)[number];
 
 export function ehTipo(v: string): v is Tipo {
   return (TIPOS as readonly string[]).includes(v);
+}
+
+/**
+ * Normaliza o regime informado (trim + maiúsculas). "RSA" é aceito como
+ * sinônimo legado de "SA" — usado na importação de planilhas antigas
+ * (ver db/migracao_regime_sa.sql).
+ */
+export function normalizarRegime(v: string): Tipo | null {
+  const s = v.trim().toUpperCase();
+  if (s === "RSA") return "SA";
+  return ehTipo(s) ? s : null;
 }
 
 export const MAX_REGIME_OUTRO = 50;
@@ -144,7 +155,10 @@ export function validarSaida(
   const matricula = String(input?.matricula ?? "").trim();
   const nome = String(input?.nome ?? "").trim().toUpperCase();
   const motivo = String(input?.motivo ?? "").trim().toUpperCase();
-  const regime = String(input?.regime ?? "").trim().toUpperCase();
+  // "RSA" é aceito como sinônimo legado de "SA" e normalizado para "SA".
+  const regime =
+    normalizarRegime(String(input?.regime ?? "")) ??
+    String(input?.regime ?? "").trim().toUpperCase();
   const veiculo = String(input?.veiculo ?? "").trim().toUpperCase();
   const motorista = String(input?.motorista ?? "").trim().toUpperCase();
   let horarioEmbarque = normalizarHora(String(input?.horarioEmbarque ?? "")).trim();
@@ -200,7 +214,7 @@ export function validarSaida(
   if (!local) erros.local = "Informe o local de destino.";
   if (!matricula) erros.matricula = "Informe a matrícula.";
   if (!nome) erros.nome = "Informe o nome completo.";
-  if (!ehTipo(regime)) erros.regime = "Selecione o regime RSA, FE, CR ou OUTRO.";
+  if (!ehTipo(regime)) erros.regime = "Selecione o regime SA, FE, CR ou OUTRO.";
 
   return {
     erros: Object.keys(erros).length > 0 ? erros : null,

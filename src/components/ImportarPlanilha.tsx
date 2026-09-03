@@ -78,7 +78,7 @@ export default function ImportarPlanilha({ aoFechar, aoConcluir, avisar }: Props
       "modelo-importacao-saidas.csv",
       ["Data", "Hora", "Local", "Matrícula", "Nome", "Motivo", "Regime"],
       [
-        ["28/07/2026", "07:00", "HCI MARIO COVAS", "629.896", "BRENO PITA DE MAGALHAES", "REUMATOLOGIA", "RSA"],
+        ["28/07/2026", "07:00", "HCI MARIO COVAS", "629.896", "BRENO PITA DE MAGALHAES", "REUMATOLOGIA", "SA"],
         ["28/07/2026", "14:00", "HOSPITAL MATERNO INFANTIL", "771.500-6", "CLEBER DOS SANTOS MARQUES", "RAIO X", "FE"],
       ]
     );

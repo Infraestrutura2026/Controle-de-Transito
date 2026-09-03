@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { and, asc, desc, eq, ilike, like, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { saidas } from "@/db/schema";
-import { ehTipo, validarSaida } from "@/lib/constantes";
+import { normalizarRegime, validarSaida } from "@/lib/constantes";
 import { ehAdministrador, exigirOperador } from "@/lib/sessao";
 import { respostaErroAuth } from "@/lib/apiAuth";
 
@@ -59,7 +59,8 @@ export async function GET(req: Request) {
       );
     }
     if (local) conds.push(eq(saidas.local, local));
-    if (regime && ehTipo(regime)) conds.push(eq(saidas.regime, regime));
+    const regimeFiltro = regime ? normalizarRegime(regime) : null;
+    if (regimeFiltro) conds.push(eq(saidas.regime, regimeFiltro));
     if (/^\d{4}-\d{2}-\d{2}$/.test(de)) conds.push(sql`${saidas.data} >= ${de}`);
     if (/^\d{4}-\d{2}-\d{2}$/.test(ate)) conds.push(sql`${saidas.data} <= ${ate}`);
     const onde = conds.length > 0 ? and(...conds) : undefined;
@@ -100,7 +101,7 @@ export async function GET(req: Request) {
       .from(saidas)
       .where(ondeEscopo)
       .groupBy(saidas.regime);
-    const porRegime: Record<string, number> = { RSA: 0, FE: 0, CR: 0, OUTRO: 0 };
+    const porRegime: Record<string, number> = { SA: 0, FE: 0, CR: 0, OUTRO: 0 };
     for (const r of porRegimeR) porRegime[r.regime] = Number(r.n);
 
     const locais = await db

@@ -60,7 +60,7 @@ export default function PainelAdminDashboard() {
     let nMes = 0;
     let nMesPassado = 0;
     const pessoas = new Set<string>();
-    const porRegime: Record<string, number> = { RSA: 0, FE: 0, CR: 0, OUTRO: 0 };
+    const porRegime: Record<string, number> = { SA: 0, FE: 0, CR: 0, OUTRO: 0 };
     const porData = new Map<string, number>();
     const porLocal = new Map<string, number>();
 
@@ -151,8 +151,8 @@ export default function PainelAdminDashboard() {
         />
         <CartaoKpi
           rotulo="Regimes (total)"
-          valor={`${stats.porRegime.RSA}/${stats.porRegime.FE}/${stats.porRegime.CR}/${stats.porRegime.OUTRO}`}
-          sub="RSA · FE · CR · OUTRO"
+          valor={`${stats.porRegime.SA}/${stats.porRegime.FE}/${stats.porRegime.CR}/${stats.porRegime.OUTRO}`}
+          sub="SA · FE · CR · OUTRO"
           icone={<IconeEscudo className="size-5 text-white" />}
           tom="bg-ink"
         />
@@ -204,7 +204,7 @@ export default function PainelAdminDashboard() {
           <div className="space-y-4 pt-1">
             {(
               [
-                ["RSA", stats.porRegime.RSA, "bg-sa-700"],
+                ["SA", stats.porRegime.SA, "bg-sa-700"],
                 ["FE", stats.porRegime.FE, "bg-stone-500"],
                 ["CR", stats.porRegime.CR, "bg-cr-700"],
                 ["OUTRO", stats.porRegime.OUTRO, "bg-amber-500"],

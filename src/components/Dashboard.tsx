@@ -834,7 +834,7 @@ export default function Dashboard({
                     </b>{" "}
                     de <b className="text-ink-soft">{total.toLocaleString("pt-BR")}</b> saídas
                     <span className="ml-2 hidden sm:inline">
-                      · Regimes: <b className="text-sa-700">RSA</b> · <b className="text-stone-600">FE</b> ·{" "}
+                      · Regimes: <b className="text-sa-700">SA</b> · <b className="text-stone-600">FE</b> ·{" "}
                       <b className="text-cr-700">CR</b> · <b className="text-amber-700">OUTRO</b> (conforme planilha)
                     </span>
                     {ultimaAtualizacao && (
