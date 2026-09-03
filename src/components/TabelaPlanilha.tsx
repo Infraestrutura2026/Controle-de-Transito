@@ -2,6 +2,7 @@
 
 import { Fragment, useMemo } from "react";
 import type { Saida } from "@/db/schema";
+import { normalizarHora } from "@/lib/constantes";
 import { formatarDataBR } from "@/lib/format";
 import { NOME_UNIDADE, SETOR_RESPONSAVEL } from "@/lib/unidade";
 import Brasao from "./Brasao";
@@ -20,11 +21,16 @@ import Brasao from "./Brasao";
  *    bordas pretas e espaço para assinatura no rodapé.
  *
  * 2. Agrupamento: cada registro de `saidas` é **1 PPL**. Registros com a
- *    mesma combinação data + hora + local + tipo + regime + viatura +
- *    motorista + (não realizada/justificativa) formam um único bloco, e a
- *    coluna QUANT. PPL traz o número de registros do bloco. A comparação é
- *    feita com os textos normalizados (trim, espaços colapsados, maiúsculas
- *    — ver `normalizar`). Ordem: data → hora → local → tipo de apresentação.
+ *    mesma combinação data + horário de embarque + local + tipo + regime +
+ *    viatura + motorista + (não realizada/justificativa) formam um único
+ *    bloco, e a coluna QUANT. PPL traz o número de registros do bloco. A
+ *    comparação é feita com os textos normalizados (trim, espaços colapsados,
+ *    maiúsculas — ver `normalizar`) e o horário de embarque efetivo (o
+ *    embarque informado ou, na falta dele, a hora do cadastro — ver
+ *    `horarioEmbarqueEfetivo`; assim, registros cadastrados em horas
+ *    diferentes mas com o mesmo horário de embarque formam um bloco só).
+ *    Ordem: data → horário de embarque (crescente) → viatura → motorista →
+ *    local → tipo de apresentação.
  *    Exceção: blocos de automação (nome "AUTOMAÇÃO") ou de serviço rotineiro
  *    (transporte de alimentação / retirada do lixo, incluída a viagem combinada
  *    "TRANSPORTE DE ALIMENTAÇÃO E RETIRADA DO LIXO") não são PPL —
@@ -39,10 +45,10 @@ import Brasao from "./Brasao";
  *
  * 3. Mesclagem hierárquica com `rowSpan` (a célula só é escrita na primeira
  *    linha do bloco): DATA = todas as linhas do mesmo dia; HORÁRIO = dia +
- *    horário; LOCAL = dia + horário + local; QUANT. PPL, TIPO DE APRESENTAÇÃO
- *    e REGIME nunca são mesclados (uma linha por grupo); VIATURA e MOTORISTA
- *    mesclam sequências consecutivas de valor igual dentro do mesmo
- *    dia + horário.
+ *    horário de embarque efetivo; LOCAL = dia + horário + local; QUANT. PPL,
+ *    TIPO DE APRESENTAÇÃO e REGIME nunca são mesclados (uma linha por
+ *    grupo); VIATURA e MOTORISTA mesclam sequências consecutivas de valor
+ *    igual dentro do mesmo dia + horário de embarque efetivo.
  *
  * 4. Separador de dias: entre um dia e outro entra uma faixa cinza ocupando
  *    as 8 colunas (`className="h-2 border border-ink bg-stone-300 p-0"`).
@@ -125,12 +131,24 @@ function situacaoDe(s: Pick<Saida, "naoRealizada" | "justificativa">): string {
   return s.naoRealizada ? `1${SEP}${normalizar(s.justificativa)}` : "0";
 }
 
+/**
+ * Horário de embarque efetivo da saída, normalizado (HH:mm): o horário de
+ * embarque informado pelo admin ou, se vazio, a hora do cadastro. É o valor
+ * exibido na coluna HORÁRIO DE EMBARQUE e usado na ordenação, no agrupamento
+ * e na mesclagem — assim, registros cadastrados em horas diferentes mas com
+ * o mesmo horário de embarque ficam juntos na folha.
+ */
+function horarioEmbarqueEfetivo(
+  s: Pick<Saida, "hora" | "horarioEmbarque">
+): string {
+  return normalizarHora(s.horarioEmbarque || s.hora);
+}
+
 /** Chave de agrupamento do bloco (textos normalizados). */
 function chaveGrupo(s: Saida): string {
   return [
     s.data, // YYYY-MM-DD
-    s.hora, // HH:mm
-    normalizar(s.horarioEmbarque),
+    horarioEmbarqueEfetivo(s), // HH:mm — horário de embarque efetivo
     normalizar(s.local),
     normalizar(s.motivo),
     normalizar(s.regime),
@@ -140,17 +158,21 @@ function chaveGrupo(s: Saida): string {
   ].join(SEP);
 }
 
-/** Ordem exigida pela planilha: data → hora → horário de embarque → local → tipo (motivo). */
+/**
+ * Ordem exigida pela planilha: data → horário de embarque efetivo (crescente)
+ * → viatura → motorista → local → tipo (motivo) → regime → situação. A hora
+ * do cadastro não entra mais na ordenação: quem manda na folha é o horário de
+ * embarque.
+ */
 function compararSaidas(a: Saida, b: Saida): number {
   return (
     a.data.localeCompare(b.data) ||
-    a.hora.localeCompare(b.hora) ||
-    normalizar(a.horarioEmbarque).localeCompare(normalizar(b.horarioEmbarque)) ||
+    horarioEmbarqueEfetivo(a).localeCompare(horarioEmbarqueEfetivo(b)) ||
+    normalizar(a.veiculo).localeCompare(normalizar(b.veiculo)) ||
+    normalizar(a.motorista).localeCompare(normalizar(b.motorista)) ||
     normalizar(a.local).localeCompare(normalizar(b.local)) ||
     normalizar(a.motivo).localeCompare(normalizar(b.motivo)) ||
     normalizar(a.regime).localeCompare(normalizar(b.regime)) ||
-    normalizar(a.veiculo).localeCompare(normalizar(b.veiculo)) ||
-    normalizar(a.motorista).localeCompare(normalizar(b.motorista)) ||
     situacaoDe(a).localeCompare(situacaoDe(b))
   );
 }
@@ -340,13 +362,16 @@ const rowSpanDe = (c: Celula): number | undefined => (c.rowSpan > 1 ? c.rowSpan 
 
 /**
  * Calcula quais células aparecem em cada linha e com que rowSpan, seguindo a
- * hierarquia da folha: dia → horário → local; viatura/motorista mesclam por
- * sequência consecutiva de valor igual dentro do mesmo dia + horário.
+ * hierarquia da folha: dia → horário de embarque efetivo → local;
+ * viatura/motorista mesclam por sequência consecutiva de valor igual dentro
+ * do mesmo dia + horário de embarque efetivo — o que junta na mesma célula
+ * as linhas com o mesmo horário de embarque, viatura e motorista.
  */
 function montarLayout(linhas: LinhaPlanilhaVisual[]): LinhaLayout[] {
   const n = linhas.length;
   const chaveDia = (i: number) => linhas[i].data;
-  const chaveHora = (i: number) => `${linhas[i].data}${SEP}${linhas[i].hora}${SEP}${linhas[i].horarioEmbarque}`;
+  const chaveHora = (i: number) =>
+    `${linhas[i].data}${SEP}${horarioEmbarqueEfetivo(linhas[i])}`;
   const chaveLocal = (i: number) =>
     `${chaveHora(i)}${SEP}${normalizar(linhas[i].local)}`;
   const chaveVeiculo = (i: number) => `${chaveHora(i)}${SEP}${normalizar(linhas[i].veiculo)}`;
