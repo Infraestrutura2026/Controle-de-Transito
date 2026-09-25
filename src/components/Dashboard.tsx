@@ -27,6 +27,7 @@ import {
   IconeMais,
   IconeOrdenar,
   IconePrancheta,
+  IconeSair,
   IconeUpload,
 } from "./Icons";
 
@@ -369,7 +370,6 @@ export default function Dashboard({
         aoAbrirNovaSaida={() => setModal({ aberto: true, editando: null })}
         operador={operador}
         ehAdmin={ehAdmin}
-        aoSair={() => void sair()}
         menuAbertoMobile={menuAbertoMobile}
         setMenuAbertoMobile={setMenuAbertoMobile}
       />
@@ -407,13 +407,15 @@ export default function Dashboard({
               <span className="font-display text-xs font-semibold capitalize text-ink-soft bg-paper px-3 py-1.5 rounded-lg border border-line">
                 {dataLongaBR()}
               </span>
+              {/* Sair do sistema — antes ficava no rodapé do menu lateral. */}
               <button
                 type="button"
-                onClick={() => setModal({ aberto: true, editando: null })}
-                className="inline-flex h-9 items-center gap-2 rounded-lg bg-pine-700 px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-pine-800"
+                onClick={() => void sair()}
+                className="inline-flex h-9 items-center gap-2 rounded-lg bg-cr-700 px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-cr-800"
+                title="Encerrar a sessão e voltar ao login"
               >
-                <IconeMais className="size-4" />
-                Nova Saída
+                <IconeSair className="size-4" />
+                Sair
               </button>
             </div>
           </div>
