@@ -22,9 +22,9 @@ import Brasao from "./Brasao";
  *
  * 2. Agrupamento: cada registro de `saidas` é **1 PPL**. Registros com a
  *    mesma combinação data + horário de embarque + local + tipo + regime +
- *    viatura + motorista + (não realizada/justificativa) formam um único
- *    bloco, e a coluna QUANT. PPL traz o número de registros do bloco. A
- *    comparação é feita com os textos normalizados (trim, espaços colapsados,
+ *    viatura + motorista formam um único bloco, e a coluna QUANT. PPL traz
+ *    o número de registros do bloco. A comparação é feita com os textos
+ *    normalizados (trim, espaços colapsados,
  *    maiúsculas — ver `normalizar`) e o horário de embarque efetivo (o
  *    embarque informado ou, na falta dele, a hora do cadastro — ver
  *    `horarioEmbarqueEfetivo`; assim, registros cadastrados em horas
@@ -53,10 +53,14 @@ import Brasao from "./Brasao";
  * 4. Separador de dias: entre um dia e outro entra uma faixa cinza ocupando
  *    as 8 colunas (`className="h-2 border border-ink bg-stone-300 p-0"`).
  *
- * 5. Saídas não realizadas: o texto do tipo de apresentação vai riscado
- *    (line-through) e ao lado, em vermelho e minúsculas,
- *    "não realizada — {justificativa}". Não se escreve mais "NÃO REALIZADA"
- *    dentro do motivo.
+ * 5. Saídas não realizadas ficam **fora** da planilha: um cadastro marcado
+ *    como "não realizada" não aparece na folha nem no CSV — a planilha
+ *    registra o movimento que efetivamente ocorreu. `montarLinhasPlanilha` e
+ *    `montarCsvPlanilha` removem esses registros antes de montar o documento
+ *    (ver `somenteSaidasRealizadas`), e os relatórios calculam cartões,
+ *    totais e resumos sobre essa mesma lista filtrada. Essas saídas continuam
+ *    visíveis na listagem de Saídas Cadastradas e no relatório
+ *    "De Justificativas".
  *
  * 6. Totais: o rodapé soma **PPL** (total de registros), e não o número de
  *    linhas agrupadas. As linhas em branco de `minimoLinhas` contam sobre as
@@ -66,6 +70,7 @@ import Brasao from "./Brasao";
  *    que a pessoa pertence — ver `montarCsvPlanilha` /
  *    `CABECALHO_CSV_PLANILHA` (usados pelos dois relatórios). Blocos sem PPL
  *    ou de motivo "TRANSPORTE DE FUNCIONÁRIO" levam "—" na coluna Quant. PPL.
+ *    Saídas não realizadas também ficam fora do CSV (regra 5).
  */
 
 /* ---------------- agrupamento (1 registro = 1 PPL) ---------------- */
@@ -126,9 +131,14 @@ export const eTransporteFuncionario = (motivo: string): boolean =>
 const eSemQuantPpl = (s: Pick<Saida, "nome" | "local" | "motivo">): boolean =>
   eSemPpl(s) || eTransporteFuncionario(s.motivo);
 
-/** Situação da saída: realizada ou não realizada + justificativa. */
-function situacaoDe(s: Pick<Saida, "naoRealizada" | "justificativa">): string {
-  return s.naoRealizada ? `1${SEP}${normalizar(s.justificativa)}` : "0";
+/**
+ * Saídas que entram na planilha: só as **realizadas**. Um cadastro marcado
+ * como "saída não realizada" não aparece no Relatório Diário nem no
+ * Consolidado por Período (folha e CSV) — ver regra 5 no topo deste arquivo.
+ * Os relatórios usam o mesmo filtro para calcular cartões, totais e resumos.
+ */
+export function somenteSaidasRealizadas(itens: Saida[]): Saida[] {
+  return itens.filter((s) => !s.naoRealizada);
 }
 
 /**
@@ -154,15 +164,13 @@ function chaveGrupo(s: Saida): string {
     normalizar(s.regime),
     normalizar(s.veiculo),
     normalizar(s.motorista),
-    situacaoDe(s),
   ].join(SEP);
 }
 
 /**
  * Ordem exigida pela planilha: data → horário de embarque efetivo (crescente)
- * → viatura → motorista → local → tipo (motivo) → regime → situação. A hora
- * do cadastro não entra mais na ordenação: quem manda na folha é o horário de
- * embarque.
+ * → viatura → motorista → local → tipo (motivo) → regime. A hora do cadastro
+ * não entra mais na ordenação: quem manda na folha é o horário de embarque.
  */
 function compararSaidas(a: Saida, b: Saida): number {
   return (
@@ -172,8 +180,7 @@ function compararSaidas(a: Saida, b: Saida): number {
     normalizar(a.motorista).localeCompare(normalizar(b.motorista)) ||
     normalizar(a.local).localeCompare(normalizar(b.local)) ||
     normalizar(a.motivo).localeCompare(normalizar(b.motivo)) ||
-    normalizar(a.regime).localeCompare(normalizar(b.regime)) ||
-    situacaoDe(a).localeCompare(situacaoDe(b))
+    normalizar(a.regime).localeCompare(normalizar(b.regime))
   );
 }
 
@@ -203,16 +210,18 @@ export interface LinhaPlanilhaVisual {
   regime: string; // SA | FE | CR
   veiculo: string;
   motorista: string;
-  naoRealizada: boolean;
-  justificativa: string;
   /** matrícula e nome ficam fora da folha impressa — apenas no CSV */
   matricula: string;
   nome: string;
 }
 
-/** Converte registros de saída em linhas agrupadas da planilha. */
+/**
+ * Converte registros de saída em linhas agrupadas da planilha. Saídas
+ * marcadas como não realizadas são descartadas antes do agrupamento
+ * (regra 5 — ver `somenteSaidasRealizadas`).
+ */
 export function montarLinhasPlanilha(itens: Saida[]): LinhaPlanilhaVisual[] {
-  const ordenadas = [...itens].sort(
+  const ordenadas = [...somenteSaidasRealizadas(itens)].sort(
     (a, b) => compararSaidas(a, b) || a.id - b.id
   );
 
@@ -244,8 +253,6 @@ export function montarLinhasPlanilha(itens: Saida[]): LinhaPlanilhaVisual[] {
       regime: s.regime,
       veiculo: s.veiculo ?? "",
       motorista: s.motorista ?? "",
-      naoRealizada: s.naoRealizada,
-      justificativa: s.justificativa.trim(),
       matricula: s.matricula,
       nome: s.nome,
     });
@@ -270,10 +277,11 @@ export const CABECALHO_CSV_PLANILHA = [
 
 /**
  * Linhas do CSV: uma por PPL (matrícula e nome inclusos), na mesma ordem da
- * folha, com o Quant. PPL do bloco ao qual a pessoa pertence.
+ * folha, com o Quant. PPL do bloco ao qual a pessoa pertence. Saídas não
+ * realizadas ficam fora, como na folha (regra 5).
  */
 export function montarCsvPlanilha(itens: Saida[]): string[][] {
-  const ordenadas = [...itens].sort(
+  const ordenadas = [...somenteSaidasRealizadas(itens)].sort(
     (a, b) => compararSaidas(a, b) || a.id - b.id
   );
 
@@ -592,11 +600,6 @@ export default function TabelaPlanilha({
               ) : (
                 layout.map((celulas) => {
                   const l = celulas.linha;
-                  const motivoNaoRealizado = (
-                    <span className="text-[9.5px] font-bold lowercase text-cr-700 sm:text-[10px]">
-                      {`não realizada${l.justificativa ? ` — ${l.justificativa}` : ""}`}
-                    </span>
-                  );
                   return (
                     <Fragment key={l.chave}>
                       {/* faixa cinza entre um dia e outro */}
@@ -639,18 +642,7 @@ export default function TabelaPlanilha({
                           {l.semQuant ? "—" : l.quant}
                         </td>
                         <td className={TD}>
-                          {l.semPpl ? (
-                            "—"
-                          ) : l.naoRealizada ? (
-                            <>
-                              <span className="text-ink-soft line-through decoration-cr-700/70">
-                                {l.tipo}
-                              </span>
-                              <span className="ml-1.5">{motivoNaoRealizado}</span>
-                            </>
-                          ) : (
-                            l.tipo
-                          )}
+                          {l.semPpl ? "—" : l.tipo}
                         </td>
                         <td className={`${TD_CENTRO} text-xs font-extrabold`}>
                           {l.semPpl ? "—" : l.regime}

@@ -7,7 +7,6 @@ import {
   IconeMenuNovaSaida,
   IconeMenuSaidasCadastradas,
   IconeMenuRelatorioDiario,
-  IconeSair,
   IconeMenu,
   IconeX,
 } from "./Icons";
@@ -25,7 +24,6 @@ interface Props {
   aoAbrirNovaSaida: () => void;
   operador: OperadorResumo;
   ehAdmin: boolean;
-  aoSair: () => void;
   menuAbertoMobile: boolean;
   setMenuAbertoMobile: (v: boolean) => void;
 }
@@ -36,7 +34,6 @@ export default function Sidebar({
   aoAbrirNovaSaida,
   operador,
   ehAdmin,
-  aoSair,
   menuAbertoMobile,
   setMenuAbertoMobile,
 }: Props) {
@@ -165,30 +162,19 @@ export default function Sidebar({
           })}
         </nav>
 
-        {/* Perfil e Botão Sair na parte inferior */}
+        {/* Perfil do operador (o botão Sair fica no topo da página, ao lado da data) */}
         <div className="border-t border-slate-800/80 bg-[#0f1724] p-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="overflow-hidden">
-              <p className="truncate font-display text-xs font-bold text-white">{operador.nome}</p>
-              {ehAdmin ? (
-                <p className="truncate text-[10px] uppercase font-bold tracking-wider text-amber-400">
-                  Administrador · acesso total
-                </p>
-              ) : (
-                <p className="truncate text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                  RS {operador.rs}
-                </p>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={aoSair}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-700/80 bg-slate-800/60 px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-red-500/20 hover:border-red-500/50 hover:text-red-300"
-              title="Sair do sistema"
-            >
-              <IconeSair className="size-3.5" />
-              Sair
-            </button>
+          <div className="overflow-hidden">
+            <p className="truncate font-display text-xs font-bold text-white">{operador.nome}</p>
+            {ehAdmin ? (
+              <p className="truncate text-[10px] uppercase font-bold tracking-wider text-amber-400">
+                Administrador · acesso total
+              </p>
+            ) : (
+              <p className="truncate text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                RS {operador.rs}
+              </p>
+            )}
           </div>
         </div>
       </aside>

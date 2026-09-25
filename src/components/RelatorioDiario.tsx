@@ -9,6 +9,7 @@ import TabelaPlanilha, {
   CABECALHO_CSV_PLANILHA,
   montarCsvPlanilha,
   montarLinhasPlanilha,
+  somenteSaidasRealizadas,
 } from "./TabelaPlanilha";
 import { Cartao, baixarCSV } from "./relatorios/comum";
 
@@ -18,9 +19,11 @@ import { Cartao, baixarCSV } from "./relatorios/comum";
  * apenas na tela; a impressão/exportação reproduz a folha do setor.
  *
  * Na folha as saídas iguais do dia (mesmo horário, local, tipo, regime,
- * viatura, motorista e situação) aparecem agrupadas em um bloco com
+ * viatura e motorista) aparecem agrupadas em um bloco com
  * "Quant. PPL"; no CSV cada PPL continua sendo uma linha, com matrícula e
- * nome. As regras completas estão documentadas em TabelaPlanilha.tsx.
+ * nome. Cadastros marcados como "saída não realizada" ficam fora do relatório
+ * (folha, CSV, cartões e resumo) — ver `somenteSaidasRealizadas`. As regras
+ * completas estão documentadas em TabelaPlanilha.tsx.
  */
 export default function RelatorioDiario({ usuarioNome }: { usuarioNome: string }) {
   const [dataSel, setDataSel] = useState(() => hojeBR());
@@ -65,27 +68,33 @@ export default function RelatorioDiario({ usuarioNome }: { usuarioNome: string }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataSel]);
 
-  const linhas = useMemo(() => montarLinhasPlanilha(itens), [itens]);
+  // Cadastros marcados como "saída não realizada" ficam fora do relatório:
+  // a planilha do dia registra o movimento que efetivamente aconteceu. O
+  // filtro vale para a folha, o CSV, os cartões e o resumo por local.
+  const realizadas = useMemo(() => somenteSaidasRealizadas(itens), [itens]);
+  const qtdNaoRealizadas = itens.length - realizadas.length;
+
+  const linhas = useMemo(() => montarLinhasPlanilha(realizadas), [realizadas]);
 
   const porRegime = useMemo(() => {
     const c: Record<string, number> = { SA: 0, FE: 0, CR: 0, OUTRO: 0 };
-    for (const s of itens) c[s.regime] = (c[s.regime] ?? 0) + 1;
+    for (const s of realizadas) c[s.regime] = (c[s.regime] ?? 0) + 1;
     return c;
-  }, [itens]);
+  }, [realizadas]);
 
   const porLocal = useMemo(() => {
     const m: Record<string, number> = {};
-    for (const s of itens) m[s.local] = (m[s.local] ?? 0) + 1;
+    for (const s of realizadas) m[s.local] = (m[s.local] ?? 0) + 1;
     return Object.entries(m).sort((a, b) => b[1] - a[1]);
-  }, [itens]);
+  }, [realizadas]);
 
   /** CSV: uma linha por PPL (matrícula e nome inclusos). */
   function exportarCSV() {
-    if (itens.length === 0) return;
+    if (realizadas.length === 0) return;
     baixarCSV(
       `planilha-diaria-${dataBRParaISO(dataSel)}.csv`,
       CABECALHO_CSV_PLANILHA,
-      montarCsvPlanilha(itens)
+      montarCsvPlanilha(realizadas)
     );
   }
 
@@ -142,9 +151,20 @@ export default function RelatorioDiario({ usuarioNome }: { usuarioNome: string }
         </div>
       </div>
 
+      {/* Aviso: saídas não realizadas ficam fora da planilha (só na tela) */}
+      {qtdNaoRealizadas > 0 && (
+        <p className="rounded-xl border border-cr-200 bg-cr-100/40 px-4 py-2.5 text-xs font-semibold text-cr-700 print:hidden">
+          {qtdNaoRealizadas}{" "}
+          {qtdNaoRealizadas === 1
+            ? "saída marcada como não realizada fica"
+            : "saídas marcadas como não realizadas ficam"}{" "}
+          fora desta planilha — consulte o relatório De Justificativas.
+        </p>
+      )}
+
       {/* Resumo de apoio (só na tela — não vai para a folha impressa) */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 print:hidden">
-        <Cartao rotulo="Total de saídas" valor={itens.length} />
+        <Cartao rotulo="Total de saídas" valor={realizadas.length} />
         <Cartao rotulo="Regime SA" valor={porRegime.SA} tom="azul" />
         <Cartao rotulo="Regime FE" valor={porRegime.FE} tom="neutro" />
         <Cartao rotulo="Regime CR" valor={porRegime.CR} tom="vermelho" />
