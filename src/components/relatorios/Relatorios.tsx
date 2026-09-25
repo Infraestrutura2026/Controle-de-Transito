@@ -6,6 +6,7 @@ import TabelaPlanilha, {
   CABECALHO_CSV_PLANILHA,
   montarCsvPlanilha,
   montarLinhasPlanilha,
+  somenteSaidasRealizadas,
 } from "../TabelaPlanilha";
 import TypeBadge from "../TypeBadge";
 import { TIPOS } from "@/lib/constantes";
@@ -63,13 +64,13 @@ const OPCOES: {
   {
     id: "diario",
     label: "Diário",
-    desc: "Planilha do dia com todas as saídas, totais por regime e por local.",
+    desc: "Planilha do dia com as saídas realizadas, totais por regime e por local.",
     Icone: IconeMenuRelatorioDiario,
   },
   {
     id: "periodo",
     label: "Consolidado por Período",
-    desc: "Planilha consolidada entre duas datas, com resumo dia a dia e totais.",
+    desc: "Planilha consolidada entre duas datas (só saídas realizadas), com resumo dia a dia.",
     Icone: IconeMenuDashboard,
   },
   {
@@ -111,7 +112,7 @@ const OPCOES: {
   {
     id: "justificativas",
     label: "De Justificativas",
-    desc: "Saídas não realizadas e seus motivos no período.",
+    desc: "Saídas não realizadas e seus motivos no período (elas ficam fora do Diário e do Consolidado).",
     Icone: IconeMenuJustificativas,
   },
 ];
@@ -129,18 +130,25 @@ function contarRegimes(itens: { regime: string }[]) {
  * Consolidado por Período — mesma estrutura do documento de papel
  * (TabelaPlanilha), com as saídas do período agrupadas em blocos iguais
  * (Quant. PPL), mesclagem por data → horário → local, quadro-resumo por dia
- * e faixa de totais somando PPL. Regras completas em TabelaPlanilha.tsx.
+ * e faixa de totais somando PPL. Cadastros marcados como "saída não
+ * realizada" ficam fora do consolidado (folha, CSV, cartões e resumo por
+ * dia) — ver `somenteSaidasRealizadas`. Regras completas em
+ * TabelaPlanilha.tsx.
  */
 function RelatorioPeriodo({ usuarioNome }: PropsRelatorio) {
   const [de, setDe] = useState(primeiroDiaDoMesBR());
   const [ate, setAte] = useState(hojeBR());
   const { itens, carregando } = useSaidas({ de, ate });
 
-  const linhas = useMemo(() => montarLinhasPlanilha(itens), [itens]);
+  // Só as saídas realizadas entram no consolidado.
+  const realizadas = useMemo(() => somenteSaidasRealizadas(itens), [itens]);
+  const qtdNaoRealizadas = itens.length - realizadas.length;
+
+  const linhas = useMemo(() => montarLinhasPlanilha(realizadas), [realizadas]);
 
   const porDia = useMemo(() => {
     const m = new Map<string, { regime: string }[]>();
-    for (const s of itens) {
+    for (const s of realizadas) {
       const arr = m.get(s.data) ?? [];
       arr.push(s);
       m.set(s.data, arr);
@@ -148,13 +156,12 @@ function RelatorioPeriodo({ usuarioNome }: PropsRelatorio) {
     return [...m.entries()]
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([data, grupo]) => ({ data, total: grupo.length, reg: contarRegimes(grupo) }));
-  }, [itens]);
+  }, [realizadas]);
 
-  const total = itens.length;
-  const reg = contarRegimes(itens);
-  const locaisDistintos = new Set(itens.map((i) => i.local)).size;
+  const total = realizadas.length;
+  const reg = contarRegimes(realizadas);
   const pessoasDistintas = new Set(
-    itens.map((i) => `${i.matricula}|${i.nome.trim().toUpperCase()}`)
+    realizadas.map((i) => `${i.matricula}|${i.nome.trim().toUpperCase()}`)
   ).size;
 
   /** CSV: uma linha por PPL (matrícula e nome inclusos). */
@@ -162,7 +169,7 @@ function RelatorioPeriodo({ usuarioNome }: PropsRelatorio) {
     baixarCSV(
       `consolidado-${dataBRParaISO(de)}-a-${dataBRParaISO(ate)}.csv`,
       CABECALHO_CSV_PLANILHA,
-      montarCsvPlanilha(itens)
+      montarCsvPlanilha(realizadas)
     );
   }
 
@@ -172,6 +179,17 @@ function RelatorioPeriodo({ usuarioNome }: PropsRelatorio) {
         <SeletorPeriodo de={de} ate={ate} aoMudar={(d, a) => { setDe(d); setAte(a); }} />
         <BotoesRelatorio aoExportar={exportar} exportarDesabilitado={linhas.length === 0} />
       </div>
+
+      {/* Aviso: saídas não realizadas ficam fora do consolidado (só na tela) */}
+      {qtdNaoRealizadas > 0 && (
+        <p className="rounded-xl border border-cr-200 bg-cr-100/40 px-4 py-2.5 text-xs font-semibold text-cr-700 print:hidden">
+          {qtdNaoRealizadas}{" "}
+          {qtdNaoRealizadas === 1
+            ? "saída marcada como não realizada fica"
+            : "saídas marcadas como não realizadas ficam"}{" "}
+          fora deste consolidado — consulte o relatório De Justificativas.
+        </p>
+      )}
 
       {/* resumo de apoio — só na tela */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 print:hidden">
